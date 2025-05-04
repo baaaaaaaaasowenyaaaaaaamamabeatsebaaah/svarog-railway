@@ -27,7 +27,7 @@ async function initApp() {
     app.innerHTML = `
       <div class="container">
         <header>
-          <h1>${siteConfig.siteName}</h1>
+          <img src="${siteConfig.logo}" alt="logo" width="120px"/>
           <nav>
             ${siteConfig.navigation.items
               .map(

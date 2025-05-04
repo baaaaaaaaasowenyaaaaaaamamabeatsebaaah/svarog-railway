@@ -13,10 +13,13 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@storyblok/js": "^3.4.0",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
+    "dotenv-webpack": "^8.1.0",
     "express": "^4.19.2",
-    "helmet": "^7.1.0"
+    "helmet": "^7.1.0",
+    "storyblok-js-client": "^6.10.11"
   },
   "devDependencies": {
     "css-loader": "^6.10.0",
