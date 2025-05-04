@@ -2,19 +2,69 @@ body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
   background-color: #f5f5f5;
+  line-height: 1.6;
 }
 
 .container {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+nav {
+  display: flex;
+  gap: 20px;
+}
+
+nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+}
+
+nav a:hover {
+  color: #0066cc;
+}
+
+main {
+  padding: 40px 0;
+  min-height: 400px;
+}
+
+footer {
+  border-top: 1px solid #ddd;
+  padding: 20px 0;
+  margin-top: 40px;
   text-align: center;
 }
 
-h1 {
-  color: #333;
+.loading,
+.error {
+  text-align: center;
+  padding: 40px;
 }
 
-p {
-  color: #666;
+.error {
+  color: #dc3545;
+}
+
+button {
+  background: #0066cc;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #0052a3;
 }
