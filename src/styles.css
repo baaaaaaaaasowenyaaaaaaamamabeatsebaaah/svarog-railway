@@ -1,7 +1,62 @@
+/* src/styles.css */
+:root {
+  /* Base variables */
+  --color-primary: #0066cc;
+  --color-secondary: #6c757d;
+  --color-success: #28a745;
+  --color-danger: #dc3545;
+  --color-warning: #ffc107;
+  --color-info: #17a2b8;
+
+  --color-text: #333333;
+  --color-text-light: #666666;
+  --color-text-white: #ffffff;
+
+  --color-bg: #f5f5f5;
+  --color-bg-light: #ffffff;
+  --color-bg-dark: #333333;
+
+  --color-border: #dddddd;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 3rem;
+}
+
+/* Default theme */
+.default-theme {
+  --theme-primary: var(--color-primary);
+  --theme-secondary: var(--color-secondary);
+  --theme-bg: var(--color-bg);
+  --theme-text: var(--color-text);
+  --theme-border: var(--color-border);
+}
+
+/* Cabalou theme */
+.cabalou-theme {
+  --theme-primary: #28a745;
+  --theme-secondary: #6a0dad;
+  --theme-bg: #f9f9f9;
+  --theme-text: #222222;
+  --theme-border: #e0e0e0;
+}
+
+/* Muchandy theme */
+.muchandy-theme {
+  --theme-primary: #fd7e14;
+  --theme-secondary: #007bff;
+  --theme-bg: #f8f5f2;
+  --theme-text: #444444;
+  --theme-border: #eaeaea;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background-color: #f5f5f5;
+  background-color: var(--theme-bg, var(--color-bg));
+  color: var(--theme-text, var(--color-text));
   line-height: 1.6;
 }
 
@@ -16,7 +71,7 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 20px 0;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--theme-border, var(--color-border));
 }
 
 nav {
@@ -26,12 +81,12 @@ nav {
 
 nav a {
   text-decoration: none;
-  color: #333;
+  color: var(--theme-text, var(--color-text));
   font-weight: 500;
 }
 
 nav a:hover {
-  color: #0066cc;
+  color: var(--theme-primary, var(--color-primary));
 }
 
 main {
@@ -40,7 +95,7 @@ main {
 }
 
 footer {
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--theme-border, var(--color-border));
   padding: 20px 0;
   margin-top: 40px;
   text-align: center;
@@ -53,12 +108,12 @@ footer {
 }
 
 .error {
-  color: #dc3545;
+  color: var(--color-danger);
 }
 
 button {
-  background: #0066cc;
-  color: white;
+  background: var(--theme-primary, var(--color-primary));
+  color: var(--color-text-white);
   border: none;
   padding: 10px 20px;
   border-radius: 4px;
@@ -66,5 +121,35 @@ button {
 }
 
 button:hover {
-  background: #0052a3;
+  opacity: 0.9;
+}
+
+section {
+  margin-bottom: 30px;
+}
+
+.notice {
+  padding: 20px;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.notice h3 {
+  margin-top: 0;
+  color: #856404;
+}
+
+.notice ol {
+  margin-bottom: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--theme-primary, var(--color-primary));
 }

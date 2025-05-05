@@ -1,10 +1,13 @@
+// webpack.config.cjs
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const Dotenv = require('dotenv-webpack');
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
+  const mode = isProduction ? 'production' : 'development';
 
   return {
     entry: './src/index.js',
@@ -14,6 +17,7 @@ module.exports = (env, argv) => {
       clean: true,
       publicPath: '/',
     },
+    mode,
     module: {
       rules: [
         {
@@ -26,14 +30,22 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
+      // Define environment variables with a single plugin
+      new webpack.DefinePlugin({
+        'process.env.NODE_ENV': JSON.stringify(mode),
+      }),
+
+      // Use Dotenv for all other variables
       new Dotenv({
-        systemvars: true,
+        systemvars: true, // Load all system variables
         safe: false,
       }),
+
       new HtmlWebpackPlugin({
         template: './public/index.html',
         inject: 'body',
       }),
+
       ...(isProduction
         ? [
             new MiniCssExtractPlugin({
