@@ -30,15 +30,18 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
-      // Define environment variables with a single plugin
-      new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(mode),
-      }),
-
-      // Use Dotenv for all other variables
+      // Use Dotenv to load environment variables
       new Dotenv({
         systemvars: true, // Load all system variables
-        safe: false,
+        defaults: false, // Don't try to load .env.defaults
+      }),
+
+      // Define NODE_ENV only once to avoid conflicts
+      new webpack.DefinePlugin({
+        // Only set NODE_ENV if not already set by Dotenv
+        ...(process.env.NODE_ENV
+          ? {}
+          : { 'process.env.NODE_ENV': JSON.stringify(mode) }),
       }),
 
       new HtmlWebpackPlugin({
@@ -55,7 +58,7 @@ module.exports = (env, argv) => {
         : []),
     ],
     devServer: {
-      port: 3000,
+      port: process.env.PORT || 3000,
       hot: true,
       historyApiFallback: true,
       static: {
@@ -63,5 +66,9 @@ module.exports = (env, argv) => {
       },
     },
     devtool: isProduction ? false : 'source-map',
+    // Add this to reduce the warning noise in the console
+    stats: {
+      warningsFilter: [/Failed to parse source map/, /Module not found/],
+    },
   };
 };

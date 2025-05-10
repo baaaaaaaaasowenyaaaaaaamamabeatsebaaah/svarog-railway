@@ -2,12 +2,17 @@
 import StoryblokClient from 'storyblok-js-client';
 import { storyblokInit, apiPlugin } from '@storyblok/js';
 
-// Initialize Storyblok client
+// Get tokens from environment variables
+const previewToken = process.env.STORYBLOK_PREVIEW_TOKEN;
+const publicToken = process.env.STORYBLOK_PUBLIC_TOKEN;
+
+// Select the appropriate token based on environment
+const accessToken =
+  process.env.NODE_ENV === 'production' ? publicToken : previewToken;
+
+// Initialize Storyblok client with the token from env vars
 const client = new StoryblokClient({
-  accessToken:
-    process.env.NODE_ENV === 'production'
-      ? process.env.STORYBLOK_PUBLIC_TOKEN
-      : process.env.STORYBLOK_PREVIEW_TOKEN,
+  accessToken,
   cache: {
     clear: 'auto',
     type: 'memory',
@@ -19,10 +24,7 @@ const client = new StoryblokClient({
  */
 export function initializeStoryblok() {
   storyblokInit({
-    accessToken:
-      process.env.NODE_ENV === 'production'
-        ? process.env.STORYBLOK_PUBLIC_TOKEN
-        : process.env.STORYBLOK_PREVIEW_TOKEN,
+    accessToken,
     use: [apiPlugin],
   });
 }
@@ -33,6 +35,7 @@ export function initializeStoryblok() {
 export default class StoryblokApi {
   constructor() {
     this.client = client;
+    // Use published version in production, draft in development
     this.version =
       process.env.NODE_ENV === 'production' ? 'published' : 'draft';
   }
@@ -45,6 +48,7 @@ export default class StoryblokApi {
    */
   async getStory(slug, options = {}) {
     try {
+      console.log(`Fetching story: ${slug}`);
       const { data } = await this.client.get(`cdn/stories/${slug}`, {
         version: this.version,
         ...options,
@@ -52,7 +56,7 @@ export default class StoryblokApi {
       return data?.story;
     } catch (error) {
       console.error(`Error fetching story ${slug}:`, error);
-      return null; // Return null instead of throwing
+      return null;
     }
   }
 
@@ -70,7 +74,7 @@ export default class StoryblokApi {
       return data?.stories || [];
     } catch (error) {
       console.error('Error fetching stories:', error);
-      return []; // Return empty array instead of throwing
+      return [];
     }
   }
 
@@ -80,15 +84,41 @@ export default class StoryblokApi {
    */
   async getSiteConfig() {
     try {
+      console.log('Fetching site configuration');
+      // First try to get from the config story
       const story = await this.getStory('config');
+
       if (!story) {
-        // Return default config if config story not found
+        console.warn('Config story not found');
+
+        // If no config story, try to get site details
+        try {
+          const { data } = await this.client.get('cdn/spaces/me');
+          console.log('Got space details:', data);
+
+          // Create a config from space details
+          if (data && data.space) {
+            return {
+              id: data.space.id,
+              siteName: data.space.name,
+              siteDescription: `${data.space.name} - Powered by Storyblok`,
+              logo: null,
+              navigation: { items: [] },
+              theme: 'muchandy-theme',
+            };
+          }
+        } catch (spaceError) {
+          console.error('Error fetching space details:', spaceError);
+        }
+
         return this.getDefaultConfig();
       }
+
+      console.log('Config story found:', story);
       return this.transformSiteConfig(story);
     } catch (error) {
       console.error('Error fetching site configuration:', error);
-      return this.getDefaultConfig(); // Return default config on error
+      return this.getDefaultConfig();
     }
   }
 
@@ -99,17 +129,21 @@ export default class StoryblokApi {
   getDefaultConfig() {
     return {
       id: 'default',
-      siteName: 'Svarog Site',
-      siteDescription:
-        'Storyblok configuration not found. Please create a "config" content entry.',
+      siteName: 'Svarog UI',
+      siteDescription: 'Built with Svarog UI and Storyblok CMS',
       logo: null,
-      navigation: { items: [] },
+      navigation: {
+        items: [
+          { id: 'home', label: 'Home', href: '/' },
+          { id: 'about', label: 'About', href: '/about' },
+        ],
+      },
       footer: {
-        copyright: `© ${new Date().getFullYear()} Svarog Site`,
+        copyright: `© ${new Date().getFullYear()} Svarog UI`,
         links: [],
         social: [],
       },
-      theme: 'default-theme',
+      theme: 'muchandy-theme',
     };
   }
 
@@ -123,45 +157,46 @@ export default class StoryblokApi {
       return this.getDefaultConfig();
     }
 
-    const content = story.content;
+    const content = story.content || {};
 
-    // Extract site configuration
-    let siteConfig = content;
-    if (
-      content.body &&
-      Array.isArray(content.body) &&
-      content.body.length > 0
-    ) {
-      const configComponent = content.body.find(
-        (item) => item.component === 'Site Configuration'
-      );
-      siteConfig = configComponent || content.body[0];
-    }
+    // Extract site configuration fields
+    const siteName = content.siteName || content.SiteName || 'Svarog UI';
+    const siteDescription =
+      content.siteDescription || content.SiteDescription || '';
+    const logo = this.getAssetUrl(content.logo || content.Logo);
+    const theme = content.theme || content.Theme || 'muchandy-theme';
 
-    const siteName = siteConfig.SiteName || 'Svarog Site';
-    const siteDescription = siteConfig.SiteDescription || '';
-    const logo = siteConfig.Logo?.filename || null;
-    const theme = siteConfig.Theme || 'default-theme';
-
-    // Transform navigation
+    // Transform navigation if available
     let navigationItems = [];
-    if (
-      siteConfig.PrimaryNavigation &&
-      Array.isArray(siteConfig.PrimaryNavigation)
-    ) {
-      navigationItems = siteConfig.PrimaryNavigation.map(
-        this.transformNavigationItem
+    if (content.navigation && content.navigation.items) {
+      navigationItems = content.navigation.items;
+    } else if (content.Navigation && content.Navigation.items) {
+      navigationItems = content.Navigation.items;
+    }
+
+    // Create header from config if a header component is defined
+    let header = null;
+    if (content.header || content.Header) {
+      header = content.header || content.Header;
+    }
+
+    // Look for a header in the components field
+    if (!header && content.components && Array.isArray(content.components)) {
+      header = content.components.find(
+        (c) =>
+          c.component === 'header' ||
+          c.component === 'Header' ||
+          c.component === 'CollapsibleHeader'
       );
     }
 
-    // Transform footer navigation
-    let footerLinks = [];
-    if (
-      siteConfig.FooterNavigation &&
-      Array.isArray(siteConfig.FooterNavigation)
-    ) {
-      footerLinks = siteConfig.FooterNavigation.map(
-        this.transformNavigationItem
+    // Look for a header in the body field
+    if (!header && content.body && Array.isArray(content.body)) {
+      header = content.body.find(
+        (c) =>
+          c.component === 'header' ||
+          c.component === 'Header' ||
+          c.component === 'CollapsibleHeader'
       );
     }
 
@@ -171,33 +206,75 @@ export default class StoryblokApi {
       siteDescription,
       logo,
       navigation: { items: navigationItems },
-      footer: {
-        copyright: `© ${new Date().getFullYear()} ${siteName}`,
-        links: footerLinks,
-        social: siteConfig.SocialLinks || [],
-      },
+      header,
       theme,
     };
   }
 
   /**
-   * Transform a navigation item
-   * @param {Object} item - Navigation item from Storyblok
-   * @returns {Object} - Transformed item
+   * Create a header component from site config
+   * @param {Object} config - Site configuration
+   * @returns {Object} - Header component data
    */
-  transformNavigationItem(item) {
-    let url = '/';
-    if (item.URL) {
-      if (item.URL.cached_url) {
-        url = '/' + item.URL.cached_url;
-      } else if (item.URL.url) {
-        url = item.URL.url;
-      }
-    }
+  createHeaderFromConfig(config) {
     return {
-      label: item.Label || 'Unknown',
-      url: url,
+      component: 'Header',
+      _uid: 'generated-header',
+      siteName: config.siteName,
+      navigation: config.navigation,
+      logo: config.logo,
     };
+  }
+
+  /**
+   * Get header data
+   * @returns {Promise<Object>} - Header component data
+   */
+  async getHeaderData() {
+    try {
+      // Try to get header from site config first
+      const config = await this.getSiteConfig();
+
+      if (config.header) {
+        return config.header;
+      }
+
+      // Try to get a standalone header story
+      const headerStory = await this.getStory('header');
+      if (headerStory && headerStory.content) {
+        return headerStory.content;
+      }
+
+      // Create a header from config
+      return this.createHeaderFromConfig(config);
+    } catch (error) {
+      console.error('Error fetching header data:', error);
+
+      // Return a minimal header
+      return {
+        component: 'Header',
+        siteName: 'Svarog UI',
+        navigation: {
+          items: [
+            { id: 'home', label: 'Home', href: '/' },
+            { id: 'about', label: 'About', href: '/about' },
+          ],
+        },
+      };
+    }
+  }
+
+  /**
+   * Get asset URL from Storyblok asset object
+   * @param {Object|string} asset - Asset object or string URL
+   * @returns {string|null} - Asset URL or null
+   */
+  getAssetUrl(asset) {
+    if (!asset) return null;
+
+    if (typeof asset === 'string') return asset;
+    if (asset.filename) return asset.filename;
+    return null;
   }
 
   /**
@@ -207,6 +284,7 @@ export default class StoryblokApi {
    */
   async getTranslations(language = 'en') {
     try {
+      // Try to get translations from datasource
       const { data } = await this.client.get(`cdn/datasource_entries`, {
         datasource: `translations_${language}`,
       });
@@ -220,32 +298,17 @@ export default class StoryblokApi {
 
       return translations;
     } catch (error) {
-      console.error(`Error fetching translations for ${language}:`, error);
-      // Return default translations instead of empty object
-      return this.getDefaultTranslations(language);
-    }
-  }
+      console.warn(`Error fetching translations for ${language}:`, error);
 
-  /**
-   * Get default translations if Storyblok translations are not available
-   * @param {string} language - Language code
-   * @returns {Object} - Default translations
-   */
-  getDefaultTranslations(language) {
-    // Default translations for English
-    if (language === 'en') {
+      // Return default translations
       return {
         loading: 'Loading...',
         error_loading: 'Error Loading Content',
         retry: 'Retry',
-        connected: 'Successfully connected to Storyblok!',
         page_not_found: 'Page Not Found',
         back_to_home: 'Back to Home',
-        storyblok_setup_needed: 'Storyblok setup needed',
+        site_name: 'Svarog UI',
       };
     }
-
-    // For other languages, return English defaults
-    return this.getDefaultTranslations('en');
   }
 }

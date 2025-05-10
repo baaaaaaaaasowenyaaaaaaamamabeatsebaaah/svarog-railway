@@ -1,182 +1,206 @@
-# Svarog UI - Component Library Template
+# Svarog UI with Storyblok
 
-A vanilla JavaScript component library with Storyblok CMS integration and theme system.
+This project integrates Svarog UI components with Storyblok CMS to create a modern, component-based website.
 
-## 🚀 Features
+## Prerequisites
 
-- 🛠️ **Pure vanilla JavaScript** - No framework dependencies
-- 🎨 **Theming system** - CSS variables for consistent styling
-- 📱 **Responsive components** - Mobile-first design approach
-- 💻 **Storyblok CMS integration** - For content management
-- 🧩 **Component-based architecture** - For reusability
-- 🌐 **SPA navigation** - For smooth user experience
-- 📦 **Railway deployment ready** - Easy deployment setup
-
-## 📋 Prerequisites
-
-- Node.js 18+
+- Node.js 18 or higher
 - npm or yarn
-- Storyblok account (optional, for CMS features)
+- A Storyblok account with an API token
 
-## 🛠️ Installation
+## Project Structure
 
-1. Clone this repository:
+```
+├── lib/                     # Local dependencies
+│   └── svarog-ui/           # Svarog UI library
+├── public/                  # Static assets
+├── src/
+│   ├── cms/                 # CMS integration
+│   │   ├── schema.js        # Storyblok schema validation
+│   │   ├── storyblok.js     # Storyblok API client
+│   │   └── storyblok-integration.js # Integration with Svarog
+│   ├── components/          # Component adapters
+│   │   ├── base/            # Base adapter classes
+│   │   ├── contact/         # Contact components
+│   │   ├── header/          # Header components
+│   │   ├── navigation/      # Navigation components
+│   │   ├── loader.js        # Component loader
+│   │   └── registry.js      # Component registry
+│   ├── utils/               # Utility functions
+│   ├── app.js               # Main application
+│   ├── index.js             # Entry point
+│   └── styles.css           # Global styles
+├── .env.example             # Example environment variables
+├── package.json             # Project dependencies and scripts
+├── server.js                # Express server for production
+└── webpack.config.cjs       # Webpack configuration
+```
 
-   ```bash
-   git clone https://github.com/yourusername/svarog-ui-template.git my-project
-   cd my-project
+## Installation
+
+1. Clone this repository
+
+   ```
+   git clone <repository-url>
+   cd svarog-storyblok
    ```
 
-2. Install dependencies:
+2. Install dependencies
 
-   ```bash
+   ```
    npm install
    ```
 
-3. Set up environment variables:
+3. Add Svarog UI library to the lib directory
 
-   ```bash
+   ```
+   mkdir -p lib/svarog-ui
+   # Copy Svarog UI files into lib/svarog-ui
+   ```
+
+4. Create a `.env` file from `.env.example`
+
+   ```
    cp .env.example .env
-   # Edit .env with your Storyblok credentials
    ```
 
-4. Start development server:
+5. Update the `.env` file with your Storyblok tokens and space ID.
 
-   ```bash
-   npm run dev
-   ```
+## Development
 
-5. Build for production:
-
-   ```bash
-   npm run build
-   ```
-
-6. Start production server:
-   ```bash
-   npm start
-   ```
-
-## 🏗️ Project Structure
+Start the development server:
 
 ```
-svarog-ui/
-├── public/                  # Static assets
-├── src/
-│   ├── cms/                # CMS integration
-│   │   └── storyblok.js    # Storyblok client setup
-│   ├── utils/              # Utility functions
-│   │   ├── componentRenderer.js  # Component renderer
-│   │   ├── i18n.js         # Internationalization
-│   │   └── theme.js        # Theme management
-│   ├── index.js            # Application entry point
-│   └── styles.css          # Global styles & themes
-├── .env.example            # Environment variables template
-├── package.json            # Dependencies and scripts
-├── server.js               # Express server for production
-├── webpack.config.cjs      # Webpack configuration
-└── README.md               # Project documentation
+npm run dev
 ```
 
-## 🎨 Theming System
+This will start a development server on http://localhost:3000.
 
-Svarog uses a CSS variable-based theme system with three themes included:
+## Building for Production
 
-- `default-theme` - Blue primary colors
-- `cabalou-theme` - Green/purple color scheme
-- `muchandy-theme` - Orange/blue color scheme
+Build the project for production:
 
-To switch themes:
+```
+npm run build
+```
+
+The build output will be in the `dist` directory.
+
+## Deployment
+
+Deploy to Railway:
+
+1. Connect your repository to Railway
+2. Set the environment variables in Railway
+3. Deploy the project
+
+## Storyblok Setup
+
+### 1. Create Content Types
+
+#### CollapsibleHeader
+
+- siteName (Text)
+- navigation (Block)
+- contactInfo (Block)
+- logo (Asset)
+- compactLogo (Asset)
+- collapseThreshold (Number)
+- callButtonText (Text)
+- showStickyIcons (Boolean)
+
+#### ContactInfo
+
+- location (Text)
+- phone (Text)
+- email (Text)
+- locationId (Text)
+
+#### Navigation
+
+- items (Blocks)
+
+#### NavigationItem
+
+- label (Text)
+- href (Link)
+- items (Blocks)
+- disabled (Boolean)
+
+#### SubNavigationItem
+
+- Label (Text)
+- URL (Link)
+
+### 2. Create a Config Entry
+
+Create a "Config" content entry with:
+
+- SiteName
+- SiteDescription
+- Logo
+- Theme
+- And include a CollapsibleHeader component in the content
+
+### 3. Create Pages
+
+Create pages with the following structure:
+
+- Home page with slug "home"
+- Other pages with appropriate slugs
+
+## Adding New Components
+
+To add new Svarog UI components to the integration:
+
+1. Create a new adapter in the appropriate directory under `src/components/`
+2. Update the component registry in `src/components/registry.js`
+3. Add schema validation in `src/cms/schema.js`
+4. Create the content type in Storyblok
+
+Example adapter:
 
 ```javascript
-import { themeManager } from './src/utils/theme';
-themeManager.switchTheme('cabalou-theme');
-```
+// src/components/custom/ExampleAdapter.js
+import ComponentAdapter from '../base/ComponentAdapter.js';
 
-To add new themes, edit the `src/styles.css` file and register the theme in `src/utils/theme.js`.
+export class ExampleAdapter extends ComponentAdapter {
+  transformProps() {
+    const data = this.storyblokData;
 
-## 🔄 Storyblok Integration
-
-This template includes a complete Storyblok CMS integration. To use it:
-
-1. Create a Storyblok account and space
-2. Add your API keys to the `.env` file
-3. Create a "Config" content type with fields for site configuration
-
-### Example Storyblok Schema
-
-```
-Config
-├── SiteName (text)
-├── SiteDescription (text)
-├── Logo (asset)
-├── PrimaryNavigation (blocks)
-│   └── NavigationItem (component)
-│       ├── Label (text)
-│       └── URL (link)
-├── FooterNavigation (blocks)
-│   └── NavigationItem (component)
-├── SocialLinks (blocks)
-│   └── SocialLink (component)
-└── Theme (select: default-theme, cabalou-theme, muchandy-theme)
-```
-
-## 🚂 Railway Deployment
-
-This project is preconfigured for easy deployment on Railway:
-
-1. Create a new project on Railway
-2. Connect your GitHub repository
-3. Set the required environment variables
-4. Deploy
-
-## 🧩 Component Development
-
-To create new components following the Svarog pattern:
-
-1. Create a component class that extends from Component base class
-2. Implement the required `getElement()` method
-3. Register theme variables in the CSS
-
-Example component:
-
-```javascript
-// src/components/MyComponent/MyComponent.js
-import './MyComponent.css';
-
-export default class MyComponent {
-  constructor(props) {
-    this.props = props;
-    this.element = this.createComponentElement();
+    return {
+      // Map Storyblok data to Svarog props
+      title: data.title || '',
+      content: data.content || '',
+      // Other props...
+    };
   }
 
-  createComponentElement() {
-    const element = document.createElement('div');
-    element.className = 'my-component';
+  createComponent(svarogComponents) {
+    const { ExampleComponent } = svarogComponents;
+    if (!ExampleComponent) {
+      throw new Error('ExampleComponent not found in Svarog UI');
+    }
 
-    // Your component logic here
-
-    return element;
-  }
-
-  getElement() {
-    return this.element;
+    const props = this.transformProps();
+    this.svarogComponent = new ExampleComponent(props);
+    return this.svarogComponent;
   }
 }
 ```
 
-## 📚 Documentation
+Then register it in `registry.js`:
 
-For more detailed documentation, refer to:
+```javascript
+// Add to registerAdapters() method
+registerAdapters() {
+  return {
+    // Existing adapters...
+    'Example': ExampleAdapter
+  };
+}
+```
 
-- [Storyblok API Documentation](https://www.storyblok.com/docs/api/content-delivery)
-- [Railway Documentation](https://docs.railway.app/)
-- [Webpack Documentation](https://webpack.js.org/concepts/)
+## License
 
-## 📄 License
-
-This project is licensed under the ISC License - see the LICENSE file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is licensed under the MIT License.
