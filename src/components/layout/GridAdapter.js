@@ -68,58 +68,87 @@ export class GridAdapter extends ComponentAdapter {
       const columns =
         this.storyblokData.columns || this.storyblokData.items || [];
 
-      // If there's a registry available, create child components
-      if (this.options.registry && columns.length > 0) {
-        // Attach a method to add columns after creation
-        wrapper.addColumns = async () => {
-          try {
-            for (const column of columns) {
-              // Default column width
-              const columnWidth = column.width || 12; // Default to full width
+      // Attach a method to add columns after creation
+      wrapper.addColumns = async () => {
+        try {
+          console.log('Adding columns to grid...');
 
-              // Create column config
-              const columnProps = {
-                width: columnWidth,
-              };
+          if (columns.length === 0) {
+            console.log('No columns to add');
+            return;
+          }
 
-              // Create column component
-              const columnComponent = createSvarogComponent(
-                'Grid.Column',
-                columnProps,
-                svarogComponents
-              );
-              const columnWrapper = createComponentWrapper(
-                columnComponent,
-                'Grid.Column'
-              );
+          const gridElement = wrapper.getElement();
+          if (!gridElement) {
+            console.error('Could not get grid element');
+            return;
+          }
 
-              // Add the column to the grid
-              const columnElement = columnWrapper.getElement();
+          // Create DIV column elements instead of trying to use Grid.Column
+          for (const column of columns) {
+            // Default column width
+            const columnWidth = column.width || 12; // Default to full width
+            const columnSpan = Math.min(Math.max(1, columnWidth), 12); // Ensure between 1-12
 
-              // Create content for column if it has content blocks
-              if (
-                column.content &&
-                Array.isArray(column.content) &&
-                column.content.length > 0
-              ) {
-                for (const block of column.content) {
+            // Create column div
+            const columnDiv = document.createElement('div');
+            columnDiv.className = `grid-column span-${columnSpan}`;
+            columnDiv.style.gridColumn = `span ${columnSpan}`;
+
+            // Add any additional column styles
+            if (column.offset) {
+              columnDiv.style.marginLeft = `${(column.offset / 12) * 100}%`;
+            }
+
+            // Create content for column if it has content blocks
+            if (
+              column.content &&
+              Array.isArray(column.content) &&
+              column.content.length > 0 &&
+              this.options.registry
+            ) {
+              for (const block of column.content) {
+                try {
                   const blockElement =
                     await this.options.registry.getComponentElement(block);
                   if (blockElement) {
-                    columnElement.appendChild(blockElement);
+                    columnDiv.appendChild(blockElement);
                   }
+                } catch (contentError) {
+                  console.error('Error creating column content:', contentError);
+
+                  // Add error message to the column
+                  const errorElement = document.createElement('div');
+                  errorElement.className = 'component-error';
+                  errorElement.style.padding = '10px';
+                  errorElement.style.margin = '10px 0';
+                  errorElement.style.border = '1px solid #dc3545';
+                  errorElement.style.borderRadius = '4px';
+                  errorElement.style.backgroundColor = '#f8d7da';
+                  errorElement.style.color = '#721c24';
+                  errorElement.textContent = `Error rendering component: ${contentError.message}`;
+                  columnDiv.appendChild(errorElement);
                 }
               }
-
-              // Add the column to the grid
-              gridComponent.appendChild(columnElement);
+            } else if (column.children) {
+              // If there's direct children content (string or element)
+              const contentElement = document.createElement('div');
+              contentElement.innerHTML = column.children;
+              columnDiv.appendChild(contentElement);
             }
-          } catch (error) {
-            console.error('Error adding columns to grid:', error);
-          }
-        };
 
-        // Call the method to add columns
+            // Add the column to the grid
+            gridElement.appendChild(columnDiv);
+          }
+
+          console.log(`Added ${columns.length} columns to grid`);
+        } catch (error) {
+          console.error('Error adding columns to grid:', error);
+        }
+      };
+
+      // If there's a registry available, automatically add columns
+      if (this.options.registry && columns.length > 0) {
         wrapper.addColumns();
       }
 

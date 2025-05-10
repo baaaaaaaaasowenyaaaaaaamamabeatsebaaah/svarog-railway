@@ -55,7 +55,7 @@ export class SectionAdapter extends ComponentAdapter {
    * @param {Object} svarogComponents - Svarog UI components
    * @returns {Object} - Section component
    */
-  async createComponent(svarogComponents) {
+  createComponent(svarogComponents) {
     if (!svarogComponents) {
       throw new Error('svarogComponents is required');
     }
@@ -63,74 +63,78 @@ export class SectionAdapter extends ComponentAdapter {
     const { Section } = svarogComponents;
 
     if (!Section) {
-      console.warn('Section component not found in Svarog UI');
+      console.error('Section component not found in Svarog UI');
+      console.log('Available components:', Object.keys(svarogComponents));
       return this.createFallbackSection();
     }
 
     try {
       const props = this.transformProps();
 
-      // Create the section component
-      const component = super.createComponent(svarogComponents);
+      // Create a new instance of the Section component
+      const sectionInstance = new Section(props);
 
-      // If there's nested content and a registry, handle it
-      const data = this.storyblokData;
-      if (
-        this.options.registry &&
-        data.body &&
-        Array.isArray(data.body) &&
-        data.body.length > 0
-      ) {
-        // Add a method to process body content
-        component.processBodyContent = async () => {
-          try {
-            const sectionElement = component.getElement();
-
-            // Clear placeholder content
-            sectionElement.innerHTML = '';
-
-            // Create a content container
-            const contentContainer = document.createElement('div');
-            contentContainer.className = 'section-content';
-
-            // Add title and description if available
-            if (props.title) {
-              const titleElement = document.createElement('h2');
-              titleElement.textContent = props.title;
-              contentContainer.appendChild(titleElement);
-            }
-
-            if (props.description) {
-              const descriptionElement = document.createElement('p');
-              descriptionElement.textContent = props.description;
-              contentContainer.appendChild(descriptionElement);
-            }
-
-            // Process each content block
-            for (const block of data.body) {
-              try {
-                const blockElement =
-                  await this.options.registry.getComponentElement(block);
-                if (blockElement) {
-                  contentContainer.appendChild(blockElement);
-                }
-              } catch (blockError) {
-                console.error(`Error processing block in section:`, blockError);
-              }
-            }
-
-            // Add the content container to the section
-            sectionElement.appendChild(contentContainer);
-          } catch (error) {
-            console.error('Error processing section body content:', error);
-          }
-        };
-
-        // Process content
-        await component.processBodyContent();
+      // Ensure it has a getElement method
+      if (typeof sectionInstance.getElement !== 'function') {
+        console.error('Section component does not have a getElement method');
+        return this.createFallbackSection();
       }
 
-      return component;
+      // Create a simple wrapper that preserves the getElement method
+      const wrapper = {
+        ...sectionInstance,
+        getElement: () => sectionInstance.getElement(),
+
+        // Add the processBodyContent method for handling nested content
+        processBodyContent: async () => {
+          const data = this.storyblokData;
+          const sectionElement = sectionInstance.getElement();
+
+          if (
+            this.options.registry &&
+            data.body &&
+            Array.isArray(data.body) &&
+            data.body.length > 0
+          ) {
+            try {
+              // Find the content container
+              const contentContainer =
+                sectionElement.querySelector('.section__content');
+              if (!contentContainer) {
+                console.warn('Could not find .section__content element');
+                return;
+              }
+
+              // Clear placeholder content if any
+              if (
+                contentContainer.textContent === 'Loading section content...'
+              ) {
+                contentContainer.textContent = '';
+              }
+
+              // Process each block
+              for (const block of data.body) {
+                try {
+                  const blockElement =
+                    await this.options.registry.getComponentElement(block);
+                  if (blockElement) {
+                    contentContainer.appendChild(blockElement);
+                  }
+                } catch (blockError) {
+                  console.error(
+                    'Error processing block in section:',
+                    blockError
+                  );
+                }
+              }
+            } catch (error) {
+              console.error('Error processing section body:', error);
+            }
+          }
+        },
+      };
+
+      return wrapper;
     } catch (error) {
       console.error('Error creating Section component:', error);
       return this.createFallbackSection();
@@ -175,16 +179,7 @@ export class SectionAdapter extends ComponentAdapter {
       element.appendChild(content);
     }
 
-    // If there's body content, add a placeholder
-    if (data.body && Array.isArray(data.body) && data.body.length > 0) {
-      const bodyInfo = document.createElement('p');
-      bodyInfo.textContent = `This section contains ${data.body.length} component(s) that could not be rendered.`;
-      bodyInfo.style.fontStyle = 'italic';
-      bodyInfo.style.color = '#666';
-      element.appendChild(bodyInfo);
-    }
-
-    // Return an object with getElement method
+    // Return a simple object with getElement method
     return {
       getElement: () => element,
     };

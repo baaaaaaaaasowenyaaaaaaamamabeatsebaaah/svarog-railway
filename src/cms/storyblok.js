@@ -38,6 +38,134 @@ export default class StoryblokApi {
     // Use published version in production, draft in development
     this.version =
       process.env.NODE_ENV === 'production' ? 'published' : 'draft';
+    // Store fallback content for development
+    this.fallbackContent = this.createFallbackContent();
+  }
+
+  /**
+   * Create fallback content for development when Storyblok is not available
+   * @returns {Object} - Fallback content
+   */
+  createFallbackContent() {
+    return {
+      config: {
+        name: 'Site Configuration',
+        content: {
+          siteName: 'Svarog UI Demo',
+          siteDescription: 'Built with Svarog UI and Storyblok CMS',
+          theme: 'muchandy-theme',
+          header: {
+            component: 'CollapsibleHeader',
+            _uid: 'fallback-header',
+            siteName: 'Svarog UI Demo',
+            navigation: {
+              items: [
+                { label: 'Home', href: '/' },
+                { label: 'About', href: '/about' },
+                { label: 'Contact', href: '/contact' },
+              ],
+            },
+            contactInfo: {
+              location: '123 Main Street',
+              phone: '+1 (555) 123-4567',
+              email: 'info@example.com',
+            },
+          },
+        },
+      },
+      header: {
+        name: 'Site Header',
+        content: {
+          component: 'Header',
+          _uid: 'fallback-header',
+          siteName: 'Svarog UI Demo',
+          navigation: {
+            items: [
+              { label: 'Home', href: '/' },
+              { label: 'About', href: '/about' },
+              { label: 'Contact', href: '/contact' },
+            ],
+          },
+        },
+      },
+      home: {
+        name: 'Home Page',
+        content: {
+          body: [
+            {
+              component: 'Section',
+              _uid: 'home-section-1',
+              title: 'Welcome to Svarog UI',
+              content:
+                'This is a fallback home page created when Storyblok content is unavailable.',
+            },
+            {
+              component: 'Grid',
+              _uid: 'home-grid-1',
+              columns: [
+                {
+                  width: 6,
+                  content: [
+                    {
+                      component: 'Teaser',
+                      _uid: 'home-teaser-1',
+                      headline: 'Feature 1',
+                      text: 'First amazing feature',
+                    },
+                  ],
+                },
+                {
+                  width: 6,
+                  content: [
+                    {
+                      component: 'Teaser',
+                      _uid: 'home-teaser-2',
+                      headline: 'Feature 2',
+                      text: 'Second amazing feature',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+      about: {
+        name: 'About Page',
+        content: {
+          body: [
+            {
+              component: 'Section',
+              _uid: 'about-section-1',
+              title: 'About Svarog UI',
+              content:
+                'This is a fallback about page created when Storyblok content is unavailable.',
+            },
+          ],
+        },
+      },
+      contact: {
+        name: 'Contact Page',
+        content: {
+          body: [
+            {
+              component: 'Section',
+              _uid: 'contact-section-1',
+              title: 'Contact Us',
+              content:
+                'This is a fallback contact page created when Storyblok content is unavailable.',
+            },
+            {
+              component: 'ContactInfo',
+              _uid: 'contact-info-1',
+              location: '123 Main Street',
+              phone: '+1 (555) 123-4567',
+              email: 'info@example.com',
+            },
+          ],
+        },
+      },
+    };
   }
 
   /**
@@ -53,9 +181,22 @@ export default class StoryblokApi {
         version: this.version,
         ...options,
       });
-      return data?.story;
+
+      if (data && data.story) {
+        console.log(`Story found: ${slug}`);
+        return data.story;
+      }
+
+      throw new Error('Story not found in API response');
     } catch (error) {
       console.error(`Error fetching story ${slug}:`, error);
+
+      // Return fallback content if available
+      if (this.fallbackContent[slug]) {
+        console.log(`Using fallback content for: ${slug}`);
+        return this.fallbackContent[slug];
+      }
+
       return null;
     }
   }
@@ -74,6 +215,23 @@ export default class StoryblokApi {
       return data?.stories || [];
     } catch (error) {
       console.error('Error fetching stories:', error);
+
+      // Return fallback stories if no real ones are available
+      if (options.starts_with || options.filter_query) {
+        // Try to guess which stories to return based on filter
+        const filteredFallbacks = Object.values(this.fallbackContent).filter(
+          (story) =>
+            story.name &&
+            story.name
+              .toLowerCase()
+              .includes((options.starts_with || '').toLowerCase())
+        );
+
+        if (filteredFallbacks.length > 0) {
+          return filteredFallbacks;
+        }
+      }
+
       return [];
     }
   }
@@ -136,6 +294,7 @@ export default class StoryblokApi {
         items: [
           { id: 'home', label: 'Home', href: '/' },
           { id: 'about', label: 'About', href: '/about' },
+          { id: 'contact', label: 'Contact', href: '/contact' },
         ],
       },
       footer: {
@@ -258,6 +417,7 @@ export default class StoryblokApi {
           items: [
             { id: 'home', label: 'Home', href: '/' },
             { id: 'about', label: 'About', href: '/about' },
+            { id: 'contact', label: 'Contact', href: '/contact' },
           ],
         },
       };
@@ -308,6 +468,12 @@ export default class StoryblokApi {
         page_not_found: 'Page Not Found',
         back_to_home: 'Back to Home',
         site_name: 'Svarog UI',
+        home: 'Home',
+        about: 'About',
+        contact: 'Contact',
+        content_not_found: 'Content Not Found',
+        content_not_found_message:
+          "This page doesn't contain any content blocks.",
       };
     }
   }

@@ -25,11 +25,14 @@ export default class ComponentLoader {
       // Log available components
       console.log('Available in Svarog UI:', Object.keys(svarogUI));
 
+      // Analyze and initialize components
+      const processedComponents = this.analyzeAndInitialize(svarogUI);
+
       // Store components for reuse
-      this.components = svarogUI;
+      this.components = processedComponents;
 
       // Initialize theme management
-      this.initThemeManager(svarogUI);
+      this.initThemeManager(this.components);
 
       this.isLoaded = true;
       return this.components;
@@ -37,6 +40,93 @@ export default class ComponentLoader {
       console.error('Error loading Svarog UI components:', error);
       throw new Error(`Failed to load Svarog UI components: ${error.message}`);
     }
+  }
+
+  /**
+   * Analyze and initialize components
+   * @param {Object} svarogUI - Loaded Svarog UI components
+   * @returns {Object} - Analyzed components
+   */
+  analyzeAndInitialize(svarogUI) {
+    // Import debug utility
+    import('../utils/debug.js').then((debug) => {
+      debug.analyzeComponents(svarogUI);
+    });
+
+    // Check if Grid.Column needs to be created
+    if (
+      svarogUI.Grid &&
+      !svarogUI['Grid.Column'] &&
+      typeof svarogUI.Grid === 'function'
+    ) {
+      // Check if Grid.Column exists as a static property
+      if (svarogUI.Grid.Column) {
+        console.log('Adding Grid.Column to components');
+        svarogUI['Grid.Column'] = svarogUI.Grid.Column;
+      } else {
+        console.log('Creating fallback Grid.Column');
+        svarogUI['Grid.Column'] = function Column(props) {
+          const element = document.createElement('div');
+          element.className = `grid-column span-${props.width || 12}`;
+          element.style.gridColumn = `span ${props.width || 12}`;
+
+          if (props.children) {
+            if (typeof props.children === 'string') {
+              element.textContent = props.children;
+            } else if (props.children instanceof HTMLElement) {
+              element.appendChild(props.children);
+            } else if (Array.isArray(props.children)) {
+              props.children.forEach((child) => {
+                if (child instanceof HTMLElement) {
+                  element.appendChild(child);
+                }
+              });
+            }
+          }
+
+          return {
+            getElement: () => element,
+          };
+        };
+      }
+    }
+
+    // Don't create ContactInfo if it exists
+    if (!svarogUI.ContactInfo) {
+      console.log('Creating fallback ContactInfo component');
+      svarogUI.ContactInfo = function ContactInfo(props) {
+        const element = document.createElement('div');
+        element.className = 'contact-info';
+        element.style.padding = '20px';
+        element.style.margin = '20px 0';
+        element.style.background = '#f8f8f8';
+        element.style.borderRadius = '4px';
+        element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+
+        element.innerHTML = `
+        <h3 style="margin-top: 0; color: #fd7e14;">Contact Information</h3>
+        <div style="margin-bottom: 10px;">
+          <strong>Location:</strong> ${props.location || ''}
+        </div>
+        <div style="margin-bottom: 10px;">
+          <strong>Phone:</strong> <a href="tel:${props.phone || ''}">${
+          props.phone || ''
+        }</a>
+        </div>
+        <div>
+          <strong>Email:</strong> <a href="mailto:${props.email || ''}">${
+          props.email || ''
+        }</a>
+        </div>
+      `;
+
+        return {
+          getElement: () => element,
+        };
+      };
+    }
+
+    return svarogUI;
   }
 
   /**

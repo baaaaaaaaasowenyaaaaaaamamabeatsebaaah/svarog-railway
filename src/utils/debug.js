@@ -156,3 +156,220 @@ export function addDebugPanel(svarogComponents) {
   const panel = createDebugPanel(svarogComponents);
   document.body.appendChild(panel);
 }
+
+/**
+ * Display debug information about component creation
+ * @param {string} componentName - Component name
+ * @param {Object} componentData - Storyblok component data
+ * @param {Object} svarogComponent - Created Svarog component
+ */
+export function logComponentCreation(
+  componentName,
+  componentData,
+  svarogComponent
+) {
+  console.group(`Component Creation: ${componentName}`);
+
+  console.log('Storyblok Data:', componentData);
+  console.log('Svarog Component:', svarogComponent);
+
+  if (svarogComponent) {
+    console.log(
+      'Has getElement method:',
+      typeof svarogComponent.getElement === 'function'
+    );
+    try {
+      const element = svarogComponent.getElement();
+      console.log('Element:', element);
+      console.log('Element type:', element.tagName);
+      console.log('Element class:', element.className);
+    } catch (error) {
+      console.error('Error getting element:', error);
+    }
+  }
+
+  console.groupEnd();
+}
+
+/**
+ * Create a debug toolbar for component inspection
+ * @returns {HTMLElement} - Debug toolbar element
+ */
+export function createDebugToolbar() {
+  // Create toolbar container
+  const toolbar = document.createElement('div');
+  toolbar.id = 'debug-toolbar';
+  toolbar.style.position = 'fixed';
+  toolbar.style.bottom = '0';
+  toolbar.style.left = '0';
+  toolbar.style.right = '0';
+  toolbar.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  toolbar.style.color = 'white';
+  toolbar.style.padding = '5px 10px';
+  toolbar.style.fontSize = '12px';
+  toolbar.style.fontFamily = 'monospace';
+  toolbar.style.zIndex = '9999';
+  toolbar.style.display = 'flex';
+  toolbar.style.justifyContent = 'space-between';
+  toolbar.style.alignItems = 'center';
+
+  // Add theme switcher
+  const themeSelector = document.createElement('div');
+  themeSelector.innerHTML = 'Theme: ';
+
+  ['default-theme', 'cabalou-theme', 'muchandy-theme'].forEach((theme) => {
+    const button = document.createElement('button');
+    button.textContent = theme.replace('-theme', '');
+    button.style.marginLeft = '5px';
+    button.style.padding = '3px 5px';
+    button.style.background = '#333';
+    button.style.color = 'white';
+    button.style.border = '1px solid #666';
+    button.style.borderRadius = '3px';
+    button.style.cursor = 'pointer';
+    button.style.fontSize = '10px';
+
+    button.addEventListener('click', () => {
+      document.documentElement.classList.remove(
+        'default-theme',
+        'cabalou-theme',
+        'muchandy-theme'
+      );
+      document.documentElement.classList.add(theme);
+      localStorage.setItem('svarog-theme', theme);
+      statusText.textContent = `Theme switched to: ${theme}`;
+    });
+
+    themeSelector.appendChild(button);
+  });
+
+  // Add status text
+  const statusText = document.createElement('div');
+  statusText.textContent = `Current theme: ${
+    document.documentElement.className || 'none'
+  }`;
+
+  // Add toggle visibility button
+  const toggleButton = document.createElement('button');
+  toggleButton.textContent = 'Hide';
+  toggleButton.style.padding = '3px 8px';
+  toggleButton.style.background = '#333';
+  toggleButton.style.color = 'white';
+  toggleButton.style.border = '1px solid #666';
+  toggleButton.style.borderRadius = '3px';
+  toggleButton.style.cursor = 'pointer';
+
+  let isVisible = true;
+  toggleButton.addEventListener('click', () => {
+    if (isVisible) {
+      themeSelector.style.display = 'none';
+      statusText.style.display = 'none';
+      toolbar.style.padding = '3px';
+      toggleButton.textContent = 'Show';
+    } else {
+      themeSelector.style.display = 'block';
+      statusText.style.display = 'block';
+      toolbar.style.padding = '5px 10px';
+      toggleButton.textContent = 'Hide';
+    }
+    isVisible = !isVisible;
+  });
+
+  // Add elements to toolbar
+  toolbar.appendChild(themeSelector);
+  toolbar.appendChild(statusText);
+  toolbar.appendChild(toggleButton);
+
+  return toolbar;
+}
+
+/**
+ * Analyze available components in Svarog UI
+ * @param {Object} svarogComponents - Svarog UI components
+ */
+export function analyzeComponents(svarogComponents) {
+  if (!svarogComponents) {
+    console.warn('No Svarog UI components provided');
+    return;
+  }
+
+  console.group('Svarog UI Component Analysis');
+
+  console.log(`Found ${Object.keys(svarogComponents).length} components`);
+
+  // Check for specific components
+  const componentNames = [
+    'Section',
+    'Grid',
+    'ContactInfo',
+    'Header',
+    'Card',
+    'Button',
+  ];
+
+  const results = {};
+
+  componentNames.forEach((name) => {
+    const component = svarogComponents[name];
+    const result = {
+      found: !!component,
+      type: component ? typeof component : 'not found',
+      isClass:
+        component &&
+        typeof component === 'function' &&
+        /^\s*class\s+/.test(component.toString()),
+      methods:
+        component && typeof component === 'function'
+          ? Object.getOwnPropertyNames(component.prototype || {})
+          : [],
+      hasGetElement:
+        component &&
+        typeof component === 'function' &&
+        component.prototype &&
+        typeof component.prototype.getElement === 'function',
+    };
+
+    results[name] = result;
+
+    console.log(`Component "${name}": 
+      Found: ${result.found}
+      Type: ${result.type}
+      Is Class: ${result.isClass}
+      Methods: ${result.methods.join(', ')}
+      Has getElement: ${result.hasGetElement}
+    `);
+
+    // Check for nested components (especially for Grid.Column)
+    if (name === 'Grid' && component) {
+      console.group('Checking for Grid.Column');
+
+      const hasColumn = component.Column !== undefined;
+      console.log(`Grid.Column exists: ${hasColumn}`);
+
+      if (hasColumn) {
+        console.log('Type:', typeof component.Column);
+        console.log(
+          'Is Class:',
+          typeof component.Column === 'function' &&
+            /^\s*class\s+/.test(component.Column.toString())
+        );
+      } else {
+        // Check if Column might be a property on the prototype
+        const gridProto = Object.getPrototypeOf(component);
+        const protoHasColumn = gridProto && gridProto.Column !== undefined;
+
+        console.log(`Grid prototype has Column: ${protoHasColumn}`);
+
+        if (protoHasColumn) {
+          console.log('Type:', typeof gridProto.Column);
+        }
+      }
+
+      console.groupEnd();
+    }
+  });
+
+  console.groupEnd();
+
+  return results;
+}

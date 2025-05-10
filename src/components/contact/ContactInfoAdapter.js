@@ -27,9 +27,27 @@ export class ContactInfoAdapter extends ComponentAdapter {
       locationId: data.locationId || data.LocationId || 'location',
       className: '',
       // Event handlers will be set when the component is created
-      onLocationClick: null,
-      onPhoneClick: null,
-      onEmailClick: null,
+      onLocationClick: (event) => {
+        // Scroll to the location section
+        const locationElement = document.getElementById(
+          data.locationId || data.LocationId || 'location'
+        );
+        if (locationElement) {
+          locationElement.scrollIntoView({ behavior: 'smooth' });
+          return false; // Prevent default
+        }
+        return true;
+      },
+      onPhoneClick: (event) => {
+        // Track analytics before making the call
+        console.log('Phone click tracked');
+        return true; // Allow default behavior (tel: link)
+      },
+      onEmailClick: (event) => {
+        // Track analytics before opening email client
+        console.log('Email click tracked');
+        return true; // Allow default behavior (mailto: link)
+      },
     };
   }
 
@@ -39,37 +57,74 @@ export class ContactInfoAdapter extends ComponentAdapter {
    * @returns {Object} - The ContactInfo component
    */
   createComponent(svarogComponents) {
-    const { ContactInfo } = svarogComponents;
+    // Try to find the component with different capitalizations
+    const ContactInfo =
+      svarogComponents.ContactInfo ||
+      svarogComponents.Contactinfo ||
+      svarogComponents.contactInfo ||
+      svarogComponents.contactinfo;
+
     if (!ContactInfo) {
-      throw new Error('ContactInfo component not found in Svarog UI');
+      console.warn('ContactInfo component not found in Svarog UI');
+      console.log('Available components:', Object.keys(svarogComponents));
+      return this.createFallbackContactInfo();
     }
 
-    const props = this.transformProps();
+    try {
+      const props = this.transformProps();
 
-    // Add event handlers
-    props.onLocationClick = (event) => {
-      // Scroll to the location section
-      const locationElement = document.getElementById(props.locationId);
-      if (locationElement) {
-        locationElement.scrollIntoView({ behavior: 'smooth' });
-        return false; // Prevent default
+      // Create a new instance of the ContactInfo component
+      const contactInfoInstance = new ContactInfo(props);
+
+      // Verify it has a getElement method
+      if (typeof contactInfoInstance.getElement !== 'function') {
+        console.error('ContactInfo instance does not have getElement method');
+        return this.createFallbackContactInfo();
       }
-      return true;
-    };
 
-    props.onPhoneClick = (event) => {
-      // Track analytics before making the call
-      console.log('Phone click tracked');
-      return true; // Allow default behavior (tel: link)
-    };
+      return contactInfoInstance;
+    } catch (error) {
+      console.error('Error creating ContactInfo component:', error);
+      return this.createFallbackContactInfo();
+    }
+  }
 
-    props.onEmailClick = (event) => {
-      // Track analytics before opening email client
-      console.log('Email click tracked');
-      return true; // Allow default behavior (mailto: link)
-    };
+  /**
+   * Create a fallback ContactInfo component
+   * @returns {Object} - Fallback component
+   */
+  createFallbackContactInfo() {
+    const data = this.storyblokData;
 
-    // Create the component using the base method
-    return super.createComponent(svarogComponents);
+    // Create a simple container element
+    const element = document.createElement('div');
+    element.className = 'fallback-contact-info';
+    element.style.padding = '20px';
+    element.style.margin = '20px 0';
+    element.style.border = '1px solid #eee';
+    element.style.borderRadius = '4px';
+    element.style.background = '#f8f8f8';
+
+    const location = data.location || data.Location || '';
+    const phone = data.phone || data.Phone || '';
+    const email = data.email || data.Email || '';
+
+    element.innerHTML = `
+      <h3 style="margin-top: 0; color: #fd7e14;">Contact Information</h3>
+      <div style="margin-bottom: 10px;">
+        <strong>Location:</strong> ${location}
+      </div>
+      <div style="margin-bottom: 10px;">
+        <strong>Phone:</strong> <a href="tel:${phone}">${phone}</a>
+      </div>
+      <div>
+        <strong>Email:</strong> <a href="mailto:${email}">${email}</a>
+      </div>
+    `;
+
+    // Return a simple object with getElement method
+    return {
+      getElement: () => element,
+    };
   }
 }

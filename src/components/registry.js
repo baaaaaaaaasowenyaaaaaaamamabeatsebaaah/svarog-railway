@@ -4,7 +4,7 @@ import { ContactInfoAdapter } from './contact/ContactInfoAdapter.js';
 import { NavigationAdapter } from './navigation/NavigationAdapter.js';
 import { TeaserAdapter } from './content/TeaserAdapter.js';
 import { GridAdapter } from './layout/GridAdapter.js';
-import { SectionAdapter } from './layout/SectionAdapter.js'; // Import Section adapter
+import { SectionAdapter } from './layout/SectionAdapter.js';
 
 /**
  * Component Registry for managing Storyblok to Svarog component mappings
@@ -46,7 +46,7 @@ export default class ComponentRegistry {
       grid: GridAdapter,
       Grid: GridAdapter,
 
-      // Section component
+      // Section component - Ensure both capitalizations are registered
       section: SectionAdapter,
       Section: SectionAdapter,
     };
@@ -58,7 +58,11 @@ export default class ComponentRegistry {
    * @returns {Class} - Adapter class
    */
   getAdapter(componentName) {
-    return this.adapters[componentName];
+    const adapter = this.adapters[componentName];
+    if (!adapter) {
+      console.warn(`No adapter found for component type: ${componentName}`);
+    }
+    return adapter;
   }
 
   /**
@@ -78,6 +82,7 @@ export default class ComponentRegistry {
     element.style.margin = '20px 0';
     element.style.border = '2px dashed #ccc';
     element.style.borderRadius = '4px';
+    element.style.background = '#f8f8f8';
 
     // Add component info
     let title =
@@ -86,7 +91,7 @@ export default class ComponentRegistry {
       <div style="margin-bottom: 10px; color: #666;">
         <strong>${componentType} Component</strong> (Fallback View)
       </div>
-      <h3 style="margin-top: 0;">${title}</h3>
+      <h3 style="margin-top: 0; color: #fd7e14;">${title}</h3>
     `;
 
     // Add basic content if available
@@ -184,25 +189,78 @@ export default class ComponentRegistry {
    * @returns {Promise<HTMLElement>} - DOM element or null if component creation failed
    */
   async getComponentElement(storyblokData, options = {}) {
-    const component = this.createComponent(storyblokData, options);
-
-    if (!component) {
-      return null;
-    }
-
     try {
-      // Handle async components (e.g., Grid with columns)
-      if (component.addColumns && typeof component.addColumns === 'function') {
-        await component.addColumns();
+      if (!storyblokData) {
+        console.warn('Missing component data');
+        return createFallbackElement('Unknown', {
+          error: 'Missing component data',
+        });
       }
 
-      return component.getElement();
-    } catch (error) {
-      console.error('Error getting element:', error);
+      if (!storyblokData.component) {
+        console.warn('Component type not specified in data:', storyblokData);
+        return createFallbackElement('Unknown', {
+          error: 'Component type not specified',
+        });
+      }
 
-      // Return a fallback element
-      const fallback = this.createFallbackComponent(storyblokData);
-      return fallback.getElement();
+      const component = this.createComponent(storyblokData, options);
+
+      if (!component) {
+        console.warn(`Failed to create component: ${storyblokData.component}`);
+        return createFallbackElement(storyblokData.component, storyblokData);
+      }
+
+      try {
+        // Handle components with special async initialization
+        if (
+          component.addColumns &&
+          typeof component.addColumns === 'function'
+        ) {
+          await component.addColumns();
+        }
+
+        if (
+          component.processBodyContent &&
+          typeof component.processBodyContent === 'function'
+        ) {
+          await component.processBodyContent();
+        }
+
+        // Get the element from the component
+        if (typeof component.getElement !== 'function') {
+          console.error(
+            `Component ${storyblokData.component} does not have getElement method`
+          );
+          return createFallbackElement(storyblokData.component, storyblokData);
+        }
+
+        const element = component.getElement();
+
+        if (!element || !(element instanceof HTMLElement)) {
+          console.error(
+            `Invalid element from component ${storyblokData.component}`
+          );
+          return createFallbackElement(storyblokData.component, storyblokData);
+        }
+
+        return element;
+      } catch (elementError) {
+        console.error(
+          `Error getting element for ${storyblokData.component}:`,
+          elementError
+        );
+        return createFallbackElement(storyblokData.component, storyblokData);
+      }
+    } catch (error) {
+      console.error(
+        `Error in getComponentElement for ${storyblokData?.component}:`,
+        error
+      );
+      return createFallbackElement(
+        storyblokData?.component || 'Unknown',
+        storyblokData
+      );
     }
   }
 
@@ -212,4 +270,47 @@ export default class ComponentRegistry {
   clearCache() {
     this.componentCache.clear();
   }
+}
+
+/**
+ * Create a fallback element for when component creation fails
+ * @param {string} componentType - Type of component
+ * @param {Object} data - Component data
+ * @returns {HTMLElement} - Fallback element
+ */
+function createFallbackElement(componentType, data) {
+  const element = document.createElement('div');
+  element.className = `fallback-component fallback-${componentType.toLowerCase()}`;
+  element.style.padding = '15px';
+  element.style.margin = '10px 0';
+  element.style.border = '2px dashed #ccc';
+  element.style.borderRadius = '4px';
+  element.style.background = '#f8f8f8';
+
+  const title =
+    data.title || data.headline || data.name || data.label || componentType;
+
+  element.innerHTML = `
+    <div style="margin-bottom: 10px; color: #666;">
+      <strong>${componentType} Component</strong> (Fallback View)
+    </div>
+    <h3 style="margin-top: 0; color: #fd7e14;">${title}</h3>
+  `;
+
+  // Add basic content if available
+  if (data.content || data.text || data.description || data.subheadline) {
+    const content = document.createElement('p');
+    content.textContent =
+      data.content || data.text || data.description || data.subheadline || '';
+    element.appendChild(content);
+  }
+
+  if (data.error) {
+    const errorMsg = document.createElement('p');
+    errorMsg.style.color = '#dc3545';
+    errorMsg.textContent = `Error: ${data.error}`;
+    element.appendChild(errorMsg);
+  }
+
+  return element;
 }
