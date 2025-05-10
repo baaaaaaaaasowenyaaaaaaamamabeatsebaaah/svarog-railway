@@ -1,0 +1,143 @@
+/* src/components/App/App.css */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  width: 100%;
+  z-index: 1000;
+  position: sticky;
+  top: 0;
+}
+
+.app-sticky-contact-icons {
+  position: fixed;
+  z-index: 1001; /* Above header */
+  display: none; /* Initially hidden */
+  transition: opacity 0.3s ease;
+  top: 200px;
+}
+
+/* Mobile icons position */
+@media (max-width: 768px) {
+  .app-sticky-contact-icons {
+    bottom: 16px;
+    right: 16px;
+    flex-direction: row;
+  }
+}
+
+/* Desktop icons position */
+@media (min-width: 769px) {
+  .app-sticky-contact-icons {
+    right: 16px;
+    flex-direction: column;
+  }
+}
+
+.app-content {
+  flex: 1;
+  padding-top: 20px; /* Add a little padding below header */
+  min-height: 100vh; /* Ensure content takes at least full viewport height */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
+.app-footer {
+  background-color: var(--color-bg-secondary, #f8f9fa);
+  border-top: 1px solid var(--color-border-light, #e0e0e0);
+  padding: 40px 0;
+}
+
+/* Loading States */
+.content-loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: var(--color-primary, #4294d0);
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error States */
+.content-error {
+  text-align: center;
+  padding: 60px 20px;
+  margin: 40px auto;
+  max-width: 600px;
+  background-color: #fff0f0;
+  border-radius: 8px;
+  border: 1px solid #ffcece;
+}
+
+.retry-button {
+  margin-top: 20px;
+  padding: 8px 16px;
+  background-color: var(--color-primary, #4294d0);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background-color: var(--color-primary-dark, #3281bc);
+}
+
+/* Footer styles */
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.footer-logo h3 {
+  margin: 0;
+  color: var(--color-primary, #4294d0);
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+}
+
+.footer-links a {
+  color: var(--color-text, #333);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--color-primary, #4294d0);
+}
+
+.footer-copyright {
+  color: var(--color-text-light, #6c757d);
+  font-size: 14px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .footer-links {
+    margin: 20px 0;
+  }
+}

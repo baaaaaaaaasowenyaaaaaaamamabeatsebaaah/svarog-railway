@@ -20,7 +20,7 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "storyblok-js-client": "^6.10.11",
-    "svarog-ui": "^1.1.7"
+    "svarog-ui": "^1.1.10"
   },
   "devDependencies": {
     "css-loader": "^6.10.0",

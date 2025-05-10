@@ -24,6 +24,10 @@ export default class StoryblokIntegration {
     }
 
     this.cache = {};
+    this.componentAdapters = {
+      CollapsibleHeader: CollapsibleHeaderAdapter,
+      // Add more component adapters here as needed
+    };
   }
 
   /**
@@ -120,6 +124,9 @@ export default class StoryblokIntegration {
         this.componentsRegistry
       );
 
+      // Store reference to the header component for external access
+      this.headerComponent = headerComponent;
+
       // Return the element
       return headerComponent.getElement();
     } catch (error) {
@@ -154,5 +161,306 @@ export default class StoryblokIntegration {
     `;
 
     return fallbackHeader;
+  }
+
+  /**
+   * Load and render content from a Storyblok story
+   * @param {string} slug - Story slug
+   * @returns {Promise<HTMLElement>} - Content element
+   */
+  async loadContent(slug) {
+    try {
+      console.log(`Loading content for slug: ${slug}`);
+      const story = await this.fetchStory(slug);
+      return this.renderContent(story);
+    } catch (error) {
+      console.error(`Error loading content for ${slug}:`, error);
+      return this.createErrorContent(error.message);
+    }
+  }
+
+  /**
+   * Render a Storyblok story content
+   * @param {Object} story - Storyblok story data
+   * @returns {HTMLElement} - Content element
+   */
+  renderContent(story) {
+    if (!story || !story.content) {
+      return this.createEmptyContent('Content not found');
+    }
+
+    try {
+      // Create content container
+      const contentContainer = document.createElement('div');
+      contentContainer.className = 'storyblok-content';
+
+      // Wrap in container for styling consistency
+      const container = document.createElement('div');
+      container.className = 'container';
+      contentContainer.appendChild(container);
+
+      // Add page title if available
+      if (story.name || story.content.title) {
+        const title = document.createElement('h1');
+        title.className = 'content-title';
+        title.textContent = story.content.title || story.name;
+        container.appendChild(title);
+      }
+
+      // Parse and render components from Storyblok
+      if (story.content.body && Array.isArray(story.content.body)) {
+        // Handle body components
+        story.content.body.forEach((component) => {
+          const componentElement = this.renderComponent(component);
+          if (componentElement) {
+            container.appendChild(componentElement);
+          }
+        });
+      } else if (story.content.text) {
+        // Handle simple text content
+        const textContainer = document.createElement('div');
+        textContainer.className = 'content-text';
+        textContainer.innerHTML = story.content.text;
+        container.appendChild(textContainer);
+      } else {
+        // Create fallback content
+        const fallbackContent = document.createElement('div');
+        fallbackContent.className = 'fallback-content';
+        fallbackContent.innerHTML = `
+          <div class="content-section" style="padding: 40px; background-color: #f8f9fa; border-radius: 8px; margin: 20px 0;">
+            <h2>Content for: ${story.name}</h2>
+            <p>This is a placeholder for the "${story.name}" page content.</p>
+          </div>
+        `;
+        container.appendChild(fallbackContent);
+      }
+
+      return contentContainer;
+    } catch (error) {
+      console.error('Error rendering content:', error);
+      return this.createErrorContent(error.message);
+    }
+  }
+
+  /**
+   * Render a Storyblok component
+   * @param {Object} component - Storyblok component data
+   * @returns {HTMLElement|null} - Component element or null
+   */
+  renderComponent(component) {
+    if (!component || !component.component) {
+      console.warn('Invalid component data:', component);
+      return null;
+    }
+
+    try {
+      // Check if we have an adapter for this component
+      const AdapterClass = this.componentAdapters[component.component];
+
+      if (AdapterClass) {
+        // Create adapter instance
+        const adapter = new AdapterClass(component);
+        // Create component using the adapter
+        const svarogComponent = adapter.createComponent(
+          this.componentsRegistry
+        );
+        // Return the element
+        return svarogComponent.getElement();
+      }
+
+      // For components without adapters, create a generic element
+      return this.createGenericComponent(component);
+    } catch (error) {
+      console.error(`Error rendering component ${component.component}:`, error);
+      return this.createErrorComponent(component.component, error.message);
+    }
+  }
+
+  /**
+   * Create a generic component element for components without specific adapters
+   * @param {Object} component - Storyblok component data
+   * @returns {HTMLElement} - Generic component element
+   */
+  createGenericComponent(component) {
+    const genericElement = document.createElement('div');
+    genericElement.className = `sb-component sb-component-${component.component.toLowerCase()}`;
+
+    // Create title if component has one
+    if (component.title || component.headline) {
+      const title = document.createElement('h2');
+      title.className = 'component-title';
+      title.textContent = component.title || component.headline;
+      genericElement.appendChild(title);
+    }
+
+    // Create content if component has it
+    if (component.text || component.content) {
+      const content = document.createElement('div');
+      content.className = 'component-content';
+      content.innerHTML = component.text || component.content || '';
+      genericElement.appendChild(content);
+    }
+
+    // If component has children, render them
+    if (component.body && Array.isArray(component.body)) {
+      const childrenContainer = document.createElement('div');
+      childrenContainer.className = 'component-children';
+
+      component.body.forEach((child) => {
+        const childElement = this.renderComponent(child);
+        if (childElement) {
+          childrenContainer.appendChild(childElement);
+        }
+      });
+
+      genericElement.appendChild(childrenContainer);
+    }
+
+    return genericElement;
+  }
+
+  /**
+   * Create error component
+   * @param {string} componentName - Name of the component that failed
+   * @param {string} errorMessage - Error message
+   * @returns {HTMLElement} - Error component element
+   */
+  createErrorComponent(componentName, errorMessage) {
+    const errorElement = document.createElement('div');
+    errorElement.className = 'component-error';
+    errorElement.style.padding = '15px';
+    errorElement.style.margin = '10px 0';
+    errorElement.style.backgroundColor = '#fff0f0';
+    errorElement.style.border = '1px solid #ffcece';
+    errorElement.style.borderRadius = '4px';
+
+    errorElement.innerHTML = `
+      <p><strong>Error rendering component: ${componentName}</strong></p>
+      <p>${errorMessage}</p>
+    `;
+
+    return errorElement;
+  }
+
+  /**
+   * Create empty content element
+   * @param {string} message - Message to display
+   * @returns {HTMLElement} - Empty content element
+   */
+  createEmptyContent(message) {
+    const emptyContent = document.createElement('div');
+    emptyContent.className = 'empty-content';
+    emptyContent.innerHTML = `
+      <div class="container" style="text-align: center; padding: 60px 20px;">
+        <h2>Content Not Available</h2>
+        <p>${message || 'The requested content could not be found.'}</p>
+      </div>
+    `;
+    return emptyContent;
+  }
+
+  /**
+   * Create error content element
+   * @param {string} errorMessage - Error message
+   * @returns {HTMLElement} - Error content element
+   */
+  createErrorContent(errorMessage) {
+    const errorContent = document.createElement('div');
+    errorContent.className = 'error-content';
+    errorContent.innerHTML = `
+      <div class="container" style="text-align: center; padding: 60px 20px;">
+        <h2>Error Loading Content</h2>
+        <p>${errorMessage || 'An error occurred while loading the content.'}</p>
+        <button class="retry-button" onclick="window.location.reload()">Retry</button>
+      </div>
+    `;
+    return errorContent;
+  }
+
+  /**
+   * Load and render a page from Storyblok
+   * @param {string} slug - Page slug
+   * @returns {Promise<HTMLElement>} - Page content element
+   */
+  async loadPage(slug) {
+    try {
+      // Normalize slug
+      const normalizedSlug = slug === 'home' ? '' : slug;
+
+      // Fetch story
+      const story = await this.fetchStory(normalizedSlug);
+
+      // Render content
+      return this.renderContent(story);
+    } catch (error) {
+      console.error(`Error loading page ${slug}:`, error);
+      return this.createErrorContent(error.message);
+    }
+  }
+
+  /**
+   * Load and render the site footer
+   * @param {string} configSlug - Config story slug
+   * @returns {Promise<HTMLElement>} - Footer element
+   */
+  async loadFooter(configSlug = 'config') {
+    try {
+      const configStory = await this.fetchStory(configSlug);
+
+      if (!configStory || !configStory.content) {
+        console.error('Config story not found or has no content');
+        return this.createFallbackFooter();
+      }
+
+      // Get footer data from config story
+      let footerData =
+        configStory.content.footer?.[0] || configStory.content.footer || {};
+
+      // For now, just create a fallback footer
+      // In a real implementation, you would create a footer adapter like the header
+      return this.createFallbackFooter(footerData);
+    } catch (error) {
+      console.error('Error loading footer:', error);
+      return this.createFallbackFooter();
+    }
+  }
+
+  /**
+   * Create a fallback footer element
+   * @param {Object} footerData - Optional footer data from Storyblok
+   * @returns {HTMLElement} - Fallback footer element
+   */
+  createFallbackFooter(footerData = {}) {
+    const fallbackFooter = document.createElement('footer');
+    fallbackFooter.className = 'fallback-footer';
+    fallbackFooter.style.padding = '40px 0';
+    fallbackFooter.style.background = '#f8f9fa';
+    fallbackFooter.style.borderTop = '1px solid #e0e0e0';
+
+    // Use data from Storyblok if available
+    const siteName = footerData.siteName || 'Svarog UI';
+    const copyright =
+      footerData.copyright ||
+      `© ${new Date().getFullYear()} ${siteName}. All rights reserved.`;
+
+    fallbackFooter.innerHTML = `
+      <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">${siteName}</h3>
+          </div>
+          <div style="display: flex; gap: 20px;">
+            <a href="/" style="text-decoration: none; color: var(--theme-text, #333);">Home</a>
+            <a href="/about" style="text-decoration: none; color: var(--theme-text, #333);">About</a>
+            <a href="/contact" style="text-decoration: none; color: var(--theme-text, #333);">Contact</a>
+          </div>
+          <div style="color: var(--theme-text-light, #6c757d); font-size: 14px;">
+            ${copyright}
+          </div>
+        </div>
+      </div>
+    `;
+
+    return fallbackFooter;
   }
 }
