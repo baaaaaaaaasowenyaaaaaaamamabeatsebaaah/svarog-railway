@@ -1,4 +1,4 @@
-// src/components/header/HeaderContainer.js
+// src/components/svarog/HeaderContainer.js
 /**
  * Container component for managing CollapsibleHeader state
  */
@@ -54,6 +54,23 @@ export default class HeaderContainer {
       // Get initial props
       let baseProps =
         typeof this.transformProps === 'function' ? this.transformProps() : {};
+
+      // Add proper logo URL handling
+      if (
+        baseProps.logo &&
+        typeof baseProps.logo === 'object' &&
+        baseProps.logo.filename
+      ) {
+        baseProps.logo = baseProps.logo.filename;
+      }
+
+      if (
+        baseProps.compactLogo &&
+        typeof baseProps.compactLogo === 'object' &&
+        baseProps.compactLogo.filename
+      ) {
+        baseProps.compactLogo = baseProps.compactLogo.filename;
+      }
 
       // Ensure navigation.items exists and is an array
       if (!baseProps.navigation || !Array.isArray(baseProps.navigation.items)) {

@@ -136,6 +136,17 @@ export default class StoryblokHelper {
     // Make a copy to avoid modifying the original
     const transformedProps = { ...props };
 
+    // Handle logo and compactLogo - extract filename from objects if they exist
+    if (transformedProps.logo) {
+      transformedProps.logo =
+        transformedProps.logo.filename || transformedProps.logo;
+    }
+
+    if (transformedProps.compactLogo) {
+      transformedProps.compactLogo =
+        transformedProps.compactLogo.filename || transformedProps.compactLogo;
+    }
+
     // Handle navigation structure
     if (transformedProps.navigation) {
       // If navigation is an array, flatten it and extract items

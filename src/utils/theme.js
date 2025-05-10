@@ -1,91 +1,109 @@
-// src/utils/theme.js
+// src/index.js
+import './styles.css';
+import StoryblokIntegration from './storyblokIntegration.js';
 
-/**
- * Apply a theme to the document
- * @param {string} themeName - Name of the theme to apply
- * @param {Object} svarogUI - Svarog UI library (optional)
- */
-export function applyTheme(themeName, svarogUI) {
-  console.log(`Applying theme: ${themeName}`);
+// Apply muchandy-theme immediately
+document.documentElement.classList.add('muchandy-theme');
 
-  // First, try to use Svarog UI's theme manager if available
-  if (svarogUI) {
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Create integration instance with token from environment variables
+    const storyblok = new StoryblokIntegration({
+      token: process.env.STORYBLOK_PUBLIC_TOKEN,
+      version: 'published',
+    });
+
+    // Initialize with muchandy-theme
+    storyblok.init();
+
+    // Ensure theme is set
     try {
-      // Try different theme management approaches
-
-      // Approach 1: switchTheme function
-      if (typeof svarogUI.switchTheme === 'function') {
-        console.log('Using Svarog switchTheme function');
-        svarogUI.switchTheme(themeName);
-        return;
+      if (SvarogUI && SvarogUI.switchTheme) {
+        SvarogUI.switchTheme('muchandy-theme');
       }
-
-      // Approach 2: Theme object with setTheme method
-      if (svarogUI.Theme && typeof svarogUI.Theme.setTheme === 'function') {
-        console.log('Using Svarog Theme.setTheme method');
-        svarogUI.Theme.setTheme(themeName);
-        return;
-      }
-
-      // Approach 3: themeManager object with switchTheme method
-      if (
-        svarogUI.themeManager &&
-        typeof svarogUI.themeManager.switchTheme === 'function'
-      ) {
-        console.log('Using Svarog themeManager.switchTheme method');
-        svarogUI.themeManager.switchTheme(themeName);
-        return;
-      }
-
-      console.warn(
-        'No theme management function found in Svarog UI, applying theme manually'
+    } catch (themeError) {
+      console.warn('Theme switching error:', themeError);
+      // Ensure theme class is applied manually
+      document.documentElement.classList.remove(
+        'default-theme',
+        'cabalou-theme'
       );
-    } catch (error) {
-      console.error('Error applying theme through Svarog UI:', error);
+      document.documentElement.classList.add('muchandy-theme');
+    }
+
+    // Get app container
+    const appElement = document.getElementById('app');
+    if (!appElement) {
+      console.error('App container not found');
+      return;
+    }
+
+    // Show loading state
+    appElement.innerHTML = `
+      <div class="loading">
+        <h2>Loading content...</h2>
+      </div>
+    `;
+
+    // Load and add header
+    try {
+      const headerElement = await storyblok.loadHeader();
+      if (headerElement) {
+        const headerContainer = document.createElement('header');
+        headerContainer.id = 'app-header';
+        headerContainer.appendChild(headerElement);
+        appElement.innerHTML = '';
+        appElement.appendChild(headerContainer);
+      }
+    } catch (headerError) {
+      console.error('Error loading header:', headerError);
+    }
+
+    // Create main content container
+    const mainContent = document.createElement('main');
+    mainContent.id = 'main-content';
+    appElement.appendChild(mainContent);
+
+    // Add footer
+    const footer = document.createElement('footer');
+    footer.id = 'app-footer';
+    footer.innerHTML = `
+      <div class="container">
+        <p>&copy; ${new Date().getFullYear()} Svarog UI</p>
+      </div>
+    `;
+    appElement.appendChild(footer);
+
+    // Load content for home page
+    try {
+      await storyblok.renderStory('home', mainContent);
+    } catch (contentError) {
+      console.error('Error loading content:', contentError);
+      mainContent.innerHTML = `
+        <div class="container">
+          <div class="error">
+            <h2>Error Loading Content</h2>
+            <p>${contentError.message}</p>
+            <button onclick="window.location.reload()">Retry</button>
+          </div>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Initialization error:', error);
+
+    // Show error in app container
+    const appElement = document.getElementById('app');
+    if (appElement) {
+      appElement.innerHTML = `
+        <div class="error" style="text-align: center; padding: 40px;">
+          <h2>Application Error</h2>
+          <p>${error.message || 'Unknown error occurred'}</p>
+          <p>Check the console for more details.</p>
+          <button onclick="window.location.reload()">Retry</button>
+        </div>
+      `;
     }
   }
-
-  // Fallback: Apply theme class directly to the document element
-  console.log('Applying theme manually to document element');
-
-  // Remove existing theme classes
-  const themeClasses = ['default-theme', 'cabalou-theme', 'muchandy-theme'];
-  document.documentElement.classList.remove(...themeClasses);
-
-  // Add the new theme class
-  document.documentElement.classList.add(themeName);
-
-  // Store in local storage for persistence
-  try {
-    localStorage.setItem('svarog-theme', themeName);
-  } catch (e) {
-    console.warn('Could not save theme to localStorage:', e);
-  }
-}
-
-/**
- * Get the current theme
- * @returns {string} - Current theme name
- */
-export function getCurrentTheme() {
-  // First check document element classes
-  const themeClasses = ['default-theme', 'cabalou-theme', 'muchandy-theme'];
-  for (const themeClass of themeClasses) {
-    if (document.documentElement.classList.contains(themeClass)) {
-      return themeClass;
-    }
-  }
-
-  // Then check localStorage
-  try {
-    const storedTheme = localStorage.getItem('svarog-theme');
-    if (storedTheme) {
-      return storedTheme;
-    }
-  } catch (e) {
-    console.warn('Could not read theme from localStorage:', e);
-  }
-
-  // Default to muchandy-theme
-  return 'muchandy-theme';
-}
+});
