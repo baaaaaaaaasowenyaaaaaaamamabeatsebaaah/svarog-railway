@@ -24,12 +24,6 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
     // Check if we have nested content (when data comes directly from Storyblok API)
     const content = data.content || data;
 
-    // Log original data for debugging
-    console.log(
-      'Original Storyblok header data:',
-      JSON.stringify(content, null, 2)
-    );
-
     // Process logo URLs correctly
     const logoUrl = this.assetUrl(content.logo || content.Logo);
     const compactLogoUrl = this.assetUrl(
@@ -38,12 +32,7 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
 
     // Transform navigation data with improved handling
     const navigationData = content.navigation || content.Navigation || [];
-    console.log('Navigation data before transform:', navigationData);
     const transformedNavigation = this.transformNavigation(navigationData);
-    console.log(
-      'Navigation data after transform:',
-      JSON.stringify(transformedNavigation, null, 2)
-    );
 
     // Start with basic props
     const props = {
@@ -61,7 +50,6 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
       isMobile: false, // Initial state, will be managed by container
     };
 
-    console.log('CollapsibleHeader props transformed:', props);
     return props;
   }
 
@@ -75,55 +63,31 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
       return { items: [] }; // Return empty items array as default
     }
 
-    // Extract navigation items from potentially complex structure
-    const navItems = this.extractNavigationItems(navigationData);
+    // If navigationData is an array, extract items from the first element
+    if (Array.isArray(navigationData) && navigationData.length > 0) {
+      const firstNav = navigationData[0];
 
-    // Transform each navigation item
-    const transformedItems = navItems
-      .map((item) => this.transformNavigationItem(item))
-      .filter(Boolean); // Filter out null items
+      // If this item has items property, use that
+      if (firstNav.items && Array.isArray(firstNav.items)) {
+        const transformedItems = firstNav.items
+          .map((item) => this.transformNavigationItem(item))
+          .filter(Boolean); // Filter out null items
 
-    return { items: transformedItems };
-  }
-
-  /**
-   * Extract navigation items from potentially complex Storyblok structure
-   * @param {Object|Array|null} data - Data from Storyblok
-   * @returns {Array} - Array of navigation items
-   */
-  extractNavigationItems(data) {
-    if (!data) return [];
-
-    // If it's an array, use it directly
-    if (Array.isArray(data)) return data;
-
-    // If it has an items array, use that
-    if (data.items && Array.isArray(data.items)) return data.items;
-
-    // If it's an object with navigation data
-    if (typeof data === 'object') {
-      // Look for common Storyblok navigation paths
-      for (const key of [
-        'navigation',
-        'items',
-        'nav',
-        'navItems',
-        'links',
-        'menuItems',
-      ]) {
-        if (data[key] && Array.isArray(data[key])) {
-          return data[key];
-        }
-      }
-
-      // If there's a single item that looks like a navigation item
-      if (data.label || data.href || data.url) {
-        return [data];
+        return { items: transformedItems };
       }
     }
 
-    console.warn('Could not extract navigation items from:', data);
-    return [];
+    // If navigationData is an object with items property
+    if (navigationData.items && Array.isArray(navigationData.items)) {
+      const transformedItems = navigationData.items
+        .map((item) => this.transformNavigationItem(item))
+        .filter(Boolean);
+
+      return { items: transformedItems };
+    }
+
+    // In other cases, return empty items array
+    return { items: [] };
   }
 
   /**
@@ -204,10 +168,12 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
 
     try {
       // Get collapse threshold from Storyblok data
-      const collapseThreshold =
+      const collapseThreshold = parseInt(
         this.storyblokData.collapseThreshold ||
-        this.storyblokData.CollapseThreshold ||
-        100;
+          this.storyblokData.CollapseThreshold ||
+          100,
+        10
+      );
 
       // Check if we should show sticky icons
       const showStickyIcons =

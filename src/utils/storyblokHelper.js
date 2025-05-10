@@ -133,37 +133,71 @@ export default class StoryblokHelper {
    * @returns {Object} - Transformed props
    */
   static transformHeaderProps(props) {
-    // Ensure contactInfo exists and has all required fields
-    if (!props.contactInfo) {
-      props.contactInfo = {
-        location: 'Default Location',
-        phone: '123-456-7890',
-        email: 'info@example.com',
-      };
+    // Make a copy to avoid modifying the original
+    const transformedProps = { ...props };
+
+    // Handle navigation structure
+    if (transformedProps.navigation) {
+      // If navigation is an array, flatten it and extract items
+      if (Array.isArray(transformedProps.navigation)) {
+        if (transformedProps.navigation.length > 0) {
+          const firstNav = transformedProps.navigation[0];
+
+          // If this item has items property, use that
+          if (firstNav.items && Array.isArray(firstNav.items)) {
+            transformedProps.navigation = {
+              items: firstNav.items.map((item) => ({
+                id:
+                  item._uid ||
+                  `nav-${Math.random().toString(36).substring(2, 9)}`,
+                label: item.label || 'Untitled',
+                href: item.href?.cached_url ? `/${item.href.cached_url}` : '/',
+                disabled: !!item.disabled,
+              })),
+            };
+          } else {
+            // Default empty items array
+            transformedProps.navigation = { items: [] };
+          }
+        } else {
+          // Empty navigation array
+          transformedProps.navigation = { items: [] };
+        }
+      }
+      // If navigation doesn't have items property, add it
+      else if (!transformedProps.navigation.items) {
+        transformedProps.navigation.items = [];
+      }
     } else {
-      // Set defaults for missing contactInfo properties
-      props.contactInfo = {
-        location: props.contactInfo.location || 'Default Location',
-        phone: props.contactInfo.phone || '123-456-7890',
-        email: props.contactInfo.email || 'info@example.com',
-        ...props.contactInfo,
+      // No navigation at all, create empty structure
+      transformedProps.navigation = { items: [] };
+    }
+
+    // Handle contact info
+    if (transformedProps.contactInfo) {
+      // If contactInfo is an array, use the first item
+      if (
+        Array.isArray(transformedProps.contactInfo) &&
+        transformedProps.contactInfo.length > 0
+      ) {
+        transformedProps.contactInfo = transformedProps.contactInfo[0];
+      }
+    } else {
+      // Default contact info
+      transformedProps.contactInfo = {
+        location: '',
+        phone: '',
+        email: '',
+        locationId: 'location',
       };
     }
 
-    // Ensure navigation exists and has items array
-    if (!props.navigation) {
-      props.navigation = { items: [] };
-    } else if (!props.navigation.items) {
-      props.navigation.items = [];
-    }
+    // Set defaults for other properties
+    transformedProps.siteName = transformedProps.siteName || '';
+    transformedProps.callButtonText =
+      transformedProps.callButtonText || 'Anrufen';
 
-    // Default values for other properties
-    props.siteName = props.siteName || '';
-    props.logo = props.logo || null;
-    props.compactLogo = props.compactLogo || props.logo;
-    props.callButtonText = props.callButtonText || 'Anrufen';
-
-    return props;
+    return transformedProps;
   }
 
   /**

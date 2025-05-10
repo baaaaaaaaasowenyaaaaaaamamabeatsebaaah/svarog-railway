@@ -6,10 +6,16 @@ import StoryblokHelper from './utils/storyblokHelper.js';
  * Simple HeaderContainer for managing CollapsibleHeader state
  */
 class HeaderContainer {
-  constructor(props, HeaderComponent) {
-    this.props = props;
-    this.collapseThreshold = props.collapseThreshold || 100;
-    this.HeaderComponent = HeaderComponent;
+  constructor({
+    headerData,
+    headerComponent,
+    collapseThreshold = 100,
+    showStickyIcons = false,
+  }) {
+    this.props = headerData || {};
+    this.HeaderComponent = headerComponent;
+    this.collapseThreshold = collapseThreshold;
+    this.showStickyIcons = showStickyIcons;
 
     // Initial state
     this.state = {
@@ -18,11 +24,39 @@ class HeaderContainer {
     };
 
     // Create header component
-    this.headerComponent = new HeaderComponent({
-      ...props,
-      isCollapsed: this.state.isCollapsed,
-      isMobile: this.state.isMobile,
-    });
+    try {
+      // Ensure navigation.items exists
+      if (
+        !this.props.navigation ||
+        !Array.isArray(this.props.navigation.items)
+      ) {
+        console.log('Fixing navigation.items structure');
+        if (!this.props.navigation) {
+          this.props.navigation = { items: [] };
+        } else {
+          this.props.navigation.items = Array.isArray(
+            this.props.navigation.items
+          )
+            ? this.props.navigation.items
+            : [];
+        }
+      }
+
+      console.log('Creating header with props:', {
+        ...this.props,
+        isCollapsed: this.state.isCollapsed,
+        isMobile: this.state.isMobile,
+      });
+
+      this.headerComponent = new this.HeaderComponent({
+        ...this.props,
+        isCollapsed: this.state.isCollapsed,
+        isMobile: this.state.isMobile,
+      });
+    } catch (error) {
+      console.error('Error creating header component:', error);
+      this.headerComponent = this.createFallbackHeader();
+    }
 
     // Setup event listeners
     this.setupEventListeners();
@@ -86,8 +120,58 @@ class HeaderContainer {
     handleResize();
   }
 
+  createFallbackHeader() {
+    return {
+      getElement: () => {
+        const element = document.createElement('header');
+        element.className = 'fallback-header';
+        element.style.padding = '20px';
+        element.style.background = '#fff';
+        element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        element.style.position = 'sticky';
+        element.style.top = '0';
+        element.style.zIndex = '100';
+
+        const siteName = this.props.siteName || 'Svarog UI';
+
+        element.innerHTML = `
+          <div class="container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+            <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">${siteName}</h1>
+            <nav>
+              <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
+              <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
+              <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
+            </nav>
+          </div>
+        `;
+
+        return element;
+      },
+      update: () => {}, // Placeholder update method
+    };
+  }
+
   getElement() {
-    return this.headerComponent.getElement();
+    try {
+      // Get element from header component
+      if (
+        this.headerComponent &&
+        typeof this.headerComponent.getElement === 'function'
+      ) {
+        return this.headerComponent.getElement();
+      }
+
+      // Use element property as fallback
+      if (this.headerComponent && this.headerComponent.element) {
+        return this.headerComponent.element;
+      }
+
+      // Create fallback if all else fails
+      return this.createFallbackHeader().getElement();
+    } catch (error) {
+      console.error('Error getting header element:', error);
+      return this.createFallbackHeader().getElement();
+    }
   }
 
   destroy() {
@@ -337,51 +421,62 @@ export default class StoryblokIntegration {
       }
 
       // Get header data from config story
-      const headerData = configStory.content.header?.[0] || {};
-      const collapseThreshold =
-        configStory.content.header_collapse_threshold || 100;
+      let headerData =
+        configStory.content.header?.[0] || configStory.content.header || {};
 
+      // If headerData is missing, try to find it elsewhere in the content
+      if (!headerData || Object.keys(headerData).length === 0) {
+        headerData = configStory.content;
+      }
+
+      // Log for debugging
       console.log(
-        'Raw header data from Storyblok:',
+        'Creating header with data:',
         JSON.stringify(headerData, null, 2)
       );
 
-      console.log('Creating header with props:', {
-        ...headerData,
-        collapseThreshold,
-      });
-
-      // Transform props
-      const headerProps = StoryblokHelper.transformProps(
-        'CollapsibleHeader',
-        headerData
-      );
-
-      // Check if we have CollapsibleHeader component
-      if (!this.componentsRegistry.CollapsibleHeader) {
-        console.warn(
-          'CollapsibleHeader component not found, using regular Header'
-        );
-
-        if (this.componentsRegistry.Header) {
-          // Use regular Header
-          const header = this.createComponent('Header', headerProps);
-          return header.getElement();
-        }
-
-        return null;
+      // Ensure component type is set
+      if (!headerData.component) {
+        headerData.component = 'CollapsibleHeader';
       }
 
+      // Transform the navigation structure to match what CollapsibleHeader expects
+      const transformedProps = StoryblokHelper.transformHeaderProps(headerData);
+
       // Create header container
-      const headerContainer = new HeaderContainer(
-        { ...headerProps, collapseThreshold },
-        this.componentsRegistry.CollapsibleHeader
-      );
+      const headerContainer = new HeaderContainer({
+        headerData: transformedProps,
+        headerComponent: this.componentsRegistry.CollapsibleHeader,
+        collapseThreshold: parseInt(headerData.collapseThreshold || 100, 10),
+        showStickyIcons: !!headerData.showStickyIcons,
+      });
 
       return headerContainer.getElement();
     } catch (error) {
       console.error('Error loading header:', error);
-      return null;
+
+      // Create fallback header
+      const fallbackHeader = document.createElement('header');
+      fallbackHeader.className = 'fallback-header';
+      fallbackHeader.style.padding = '20px';
+      fallbackHeader.style.background = '#fff';
+      fallbackHeader.style.position = 'sticky';
+      fallbackHeader.style.top = '0';
+      fallbackHeader.style.zIndex = '100';
+      fallbackHeader.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+
+      fallbackHeader.innerHTML = `
+        <div class="container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+          <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">Svarog UI</h1>
+          <nav>
+            <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
+            <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
+            <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
+          </nav>
+        </div>
+      `;
+
+      return fallbackHeader;
     }
   }
 }

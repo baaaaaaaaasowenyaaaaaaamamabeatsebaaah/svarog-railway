@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     // Create integration instance with token from environment variables
     const storyblok = new StoryblokIntegration({
-      token: process.env.STORYBLOK_PUBLIC_TOKEN,
+      token: process.env.STORYBLOK_PUBLIC_TOKEN || 'DITBZ0vdEovMYJLoYwPf2gtt',
       version: 'published',
     });
 

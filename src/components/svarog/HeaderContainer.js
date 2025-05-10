@@ -22,14 +22,6 @@ export default class HeaderContainer {
     showStickyIcons = false,
   }) {
     try {
-      console.log('Initializing HeaderContainer with:', {
-        headerDataAvailable: !!headerData,
-        collapseThreshold,
-        headerComponentAvailable: !!headerComponent,
-        transformPropsAvailable: !!transformProps,
-        showStickyIcons,
-      });
-
       this.headerData = headerData || {};
       this.HeaderComponent = headerComponent;
       this.transformProps = transformProps;
@@ -63,13 +55,15 @@ export default class HeaderContainer {
       let baseProps =
         typeof this.transformProps === 'function' ? this.transformProps() : {};
 
-      // *** QUICK FIX - Ensure navigation.items exists ***
-      if (!baseProps.navigation || !baseProps.navigation.items) {
-        console.log('Adding default navigation.items because it was missing');
+      // Ensure navigation.items exists and is an array
+      if (!baseProps.navigation || !Array.isArray(baseProps.navigation.items)) {
+        console.log('Fixing navigation.items structure');
         if (!baseProps.navigation) {
           baseProps.navigation = { items: [] };
         } else {
-          baseProps.navigation.items = [];
+          baseProps.navigation.items = Array.isArray(baseProps.navigation.items)
+            ? baseProps.navigation.items
+            : [];
         }
       }
 
@@ -80,18 +74,8 @@ export default class HeaderContainer {
         isMobile: this.state.isMobile,
       };
 
-      console.log(
-        'Creating HeaderComponent with props:',
-        JSON.stringify(props, null, 2)
-      );
-
       // Create the component
       this.headerComponent = new this.HeaderComponent(props);
-
-      console.log(
-        'HeaderComponent created:',
-        typeof this.headerComponent === 'object' ? 'Successfully' : 'Failed'
-      );
 
       // Check if it has the necessary methods
       if (typeof this.headerComponent.getElement !== 'function') {
