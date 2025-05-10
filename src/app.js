@@ -30,48 +30,113 @@ export default class App {
 
       // Show loading state
       appElement.innerHTML = `
-        <div class="loading">
-          <h2>Loading application...</h2>
-        </div>
-      `;
+      <div class="loading">
+        <h2>Loading application...</h2>
+      </div>
+    `;
 
       // Initialize Storyblok
-      initializeStoryblok();
+      try {
+        initializeStoryblok();
+        console.log('Storyblok initialized successfully');
+      } catch (storyblokError) {
+        console.warn('Storyblok initialization warning:', storyblokError);
+        // Continue anyway as we have fallbacks
+      }
 
       // Initialize component integration
-      await this.storyblokIntegration.initialize();
+      try {
+        await this.storyblokIntegration.initialize();
+        console.log('Component integration initialized successfully');
+      } catch (integrationError) {
+        console.error('Component integration error:', integrationError);
+        // Show a warning but continue
+        appElement.innerHTML += `
+        <div class="warning" style="background: #fff3cd; color: #856404; padding: 10px; margin: 10px 0; border-radius: 4px;">
+          <p>Some components may not display correctly. Please check the console for details.</p>
+        </div>
+      `;
+      }
 
       // Apply theme
-      await this.storyblokIntegration.applyTheme('muchandy-theme');
+      try {
+        await this.storyblokIntegration.applyTheme('muchandy-theme');
+        console.log('Theme applied successfully');
+      } catch (themeError) {
+        console.warn('Theme application warning:', themeError);
+        // Continue with default theme
+      }
 
       // Try to load translations
-      await this.loadTranslations();
+      try {
+        await this.loadTranslations();
+        console.log('Translations loaded successfully');
+      } catch (translationsError) {
+        console.warn('Translations warning:', translationsError);
+        // Continue with default translations
+      }
 
       // Create app structure
       appElement.innerHTML = `
-        <div class="app-container">
-          <header id="app-header"></header>
-          <main id="main-content"></main>
-          <footer id="app-footer">
-            <div class="container">
-              <p>&copy; ${new Date().getFullYear()} Svarog UI</p>
-            </div>
-          </footer>
-        </div>
-      `;
+      <div class="app-container">
+        <header id="app-header"></header>
+        <main id="main-content"></main>
+        <footer id="app-footer">
+          <div class="container">
+            <p>&copy; ${new Date().getFullYear()} Svarog UI</p>
+          </div>
+        </footer>
+      </div>
+    `;
 
       // Store reference to main content element
       this.mainContentElement = document.getElementById('main-content');
 
-      // Load header
-      await this.loadHeader();
+      // Load header with fallback
+      try {
+        await this.loadHeader();
+        console.log('Header loaded successfully');
+      } catch (headerError) {
+        console.error('Header loading error:', headerError);
+        // Create a basic header as fallback
+        const headerContainer = document.getElementById('app-header');
+        if (headerContainer) {
+          headerContainer.innerHTML = `
+          <div class="container default-header">
+            <h1>Svarog UI</h1>
+            <nav>
+              <a href="/">Home</a>
+              <a href="/about">About</a>
+              <a href="/contact">Contact</a>
+            </nav>
+          </div>
+        `;
+        }
+      }
 
       // Setup navigation
       this.setupNavigation();
 
       // Load initial content
       this.currentPath = window.location.pathname;
-      await this.loadContent(this.currentPath);
+      try {
+        await this.loadContent(this.currentPath);
+        console.log('Initial content loaded successfully');
+      } catch (contentError) {
+        console.error('Content loading error:', contentError);
+        // Show error message
+        if (this.mainContentElement) {
+          this.mainContentElement.innerHTML = `
+          <div class="container">
+            <div class="error">
+              <h2>Error Loading Content</h2>
+              <p>${contentError.message}</p>
+              <button onclick="window.location.reload()">Retry</button>
+            </div>
+          </div>
+        `;
+        }
+      }
 
       this.isInitialized = true;
     } catch (error) {
@@ -80,16 +145,16 @@ export default class App {
       // Show error state
       const appElement = document.getElementById('app');
       appElement.innerHTML = `
-        <div class="error">
-          <h2>${i18n.t('error_loading', {
-            default: 'Error Loading Application',
-          })}</h2>
-          <p>${error.message}</p>
-          <button onclick="window.location.reload()">${i18n.t('retry', {
-            default: 'Retry',
-          })}</button>
-        </div>
-      `;
+      <div class="error">
+        <h2>${i18n.t('error_loading', {
+          default: 'Error Loading Application',
+        })}</h2>
+        <p>${error.message}</p>
+        <button onclick="window.location.reload()">${i18n.t('retry', {
+          default: 'Retry',
+        })}</button>
+      </div>
+    `;
     }
   }
 

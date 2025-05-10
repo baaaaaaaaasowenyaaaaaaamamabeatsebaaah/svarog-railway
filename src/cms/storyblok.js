@@ -375,21 +375,6 @@ export default class StoryblokApi {
   }
 
   /**
-   * Create a header component from site config
-   * @param {Object} config - Site configuration
-   * @returns {Object} - Header component data
-   */
-  createHeaderFromConfig(config) {
-    return {
-      component: 'Header',
-      _uid: 'generated-header',
-      siteName: config.siteName,
-      navigation: config.navigation,
-      logo: config.logo,
-    };
-  }
-
-  /**
    * Get header data
    * @returns {Promise<Object>} - Header component data
    */
@@ -399,12 +384,20 @@ export default class StoryblokApi {
       const config = await this.getSiteConfig();
 
       if (config.header) {
+        // Ensure the header object has a component property
+        if (!config.header.component) {
+          config.header.component = 'CollapsibleHeader';
+        }
         return config.header;
       }
 
       // Try to get a standalone header story
       const headerStory = await this.getStory('header');
       if (headerStory && headerStory.content) {
+        // Ensure component property
+        if (!headerStory.content.component) {
+          headerStory.content.component = 'Header';
+        }
         return headerStory.content;
       }
 
@@ -426,6 +419,21 @@ export default class StoryblokApi {
         },
       };
     }
+  }
+
+  /**
+   * Create a header component from site config
+   * @param {Object} config - Site configuration
+   * @returns {Object} - Header component data
+   */
+  createHeaderFromConfig(config) {
+    return {
+      component: 'Header', // Explicitly set component type
+      _uid: 'generated-header',
+      siteName: config.siteName,
+      navigation: config.navigation,
+      logo: config.logo,
+    };
   }
 
   /**

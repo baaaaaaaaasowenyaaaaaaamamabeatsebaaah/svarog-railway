@@ -15,7 +15,7 @@ export default class ComponentLoader {
    */
   async loadComponents() {
     try {
-      if (this.isLoaded) {
+      if (this.isLoaded && this.components) {
         return this.components;
       }
 
@@ -38,7 +38,11 @@ export default class ComponentLoader {
       return this.components;
     } catch (error) {
       console.error('Error loading Svarog UI components:', error);
-      throw new Error(`Failed to load Svarog UI components: ${error.message}`);
+
+      // Return empty object as fallback
+      this.components = {};
+      this.isLoaded = true;
+      return this.components;
     }
   }
 
@@ -49,9 +53,15 @@ export default class ComponentLoader {
    */
   analyzeAndInitialize(svarogUI) {
     // Import debug utility
-    import('../utils/debug.js').then((debug) => {
-      debug.analyzeComponents(svarogUI);
-    });
+    import('../utils/debug.js')
+      .then((debug) => {
+        try {
+          debug.analyzeComponents(svarogUI);
+        } catch (e) {
+          console.warn('Error analyzing components:', e);
+        }
+      })
+      .catch((e) => console.warn('Error importing debug utility:', e));
 
     // Check if Grid.Column needs to be created
     if (
@@ -59,35 +69,166 @@ export default class ComponentLoader {
       !svarogUI['Grid.Column'] &&
       typeof svarogUI.Grid === 'function'
     ) {
-      // Check if Grid.Column exists as a static property
-      if (svarogUI.Grid.Column) {
-        console.log('Adding Grid.Column to components');
-        svarogUI['Grid.Column'] = svarogUI.Grid.Column;
-      } else {
-        console.log('Creating fallback Grid.Column');
-        svarogUI['Grid.Column'] = function Column(props) {
-          const element = document.createElement('div');
-          element.className = `grid-column span-${props.width || 12}`;
-          element.style.gridColumn = `span ${props.width || 12}`;
+      try {
+        // Check if Grid.Column exists as a static property
+        if (svarogUI.Grid.Column) {
+          console.log('Adding Grid.Column to components');
+          svarogUI['Grid.Column'] = svarogUI.Grid.Column;
+        } else {
+          console.log('Creating fallback Grid.Column');
+          svarogUI['Grid.Column'] = function Column(props) {
+            const element = document.createElement('div');
+            element.className = `grid-column span-${props.width || 12}`;
+            element.style.gridColumn = `span ${props.width || 12}`;
 
-          if (props.children) {
-            if (typeof props.children === 'string') {
-              element.textContent = props.children;
-            } else if (props.children instanceof HTMLElement) {
-              element.appendChild(props.children);
-            } else if (Array.isArray(props.children)) {
-              props.children.forEach((child) => {
-                if (child instanceof HTMLElement) {
-                  element.appendChild(child);
-                }
-              });
+            if (props.children) {
+              if (typeof props.children === 'string') {
+                element.textContent = props.children;
+              } else if (props.children instanceof HTMLElement) {
+                element.appendChild(props.children);
+              } else if (Array.isArray(props.children)) {
+                props.children.forEach((child) => {
+                  if (child instanceof HTMLElement) {
+                    element.appendChild(child);
+                  }
+                });
+              }
             }
-          }
 
-          return {
-            getElement: () => element,
+            return {
+              getElement: () => element,
+            };
           };
+        }
+      } catch (e) {
+        console.warn('Error creating Grid.Column:', e);
+      }
+    }
+
+    // Check if CollapsibleHeader is available or needs fallback
+    if (!svarogUI.CollapsibleHeader && svarogUI.Header) {
+      try {
+        console.log('Creating fallback CollapsibleHeader component');
+        svarogUI.CollapsibleHeader = function CollapsibleHeader(props) {
+          try {
+            // Create header using basic Header component
+            const header = new svarogUI.Header({
+              siteName: props.siteName,
+              navigation: props.navigation,
+              logo: props.logo,
+              className: props.className || '',
+            });
+
+            // Get the element
+            const element = header.getElement();
+
+            // Add collapsible class
+            element.classList.add('collapsible-header');
+
+            if (props.isCollapsed) {
+              element.classList.add('collapsible-header--collapsed');
+            }
+
+            if (props.isMobile) {
+              element.classList.add('collapsible-header--mobile');
+            }
+
+            // Add contact info if provided
+            if (props.contactInfo) {
+              try {
+                const contactContainer = document.createElement('div');
+                contactContainer.className = 'header-contact';
+
+                if (props.contactInfo.location) {
+                  const locationDiv = document.createElement('div');
+                  locationDiv.className = 'contact-item location';
+                  locationDiv.textContent = `Location: ${props.contactInfo.location}`;
+                  contactContainer.appendChild(locationDiv);
+                }
+
+                if (props.contactInfo.phone) {
+                  const phoneDiv = document.createElement('div');
+                  phoneDiv.className = 'contact-item phone';
+                  phoneDiv.innerHTML = `Phone: <a href="tel:${props.contactInfo.phone}">${props.contactInfo.phone}</a>`;
+                  contactContainer.appendChild(phoneDiv);
+                }
+
+                if (props.contactInfo.email) {
+                  const emailDiv = document.createElement('div');
+                  emailDiv.className = 'contact-item email';
+                  emailDiv.innerHTML = `Email: <a href="mailto:${props.contactInfo.email}">${props.contactInfo.email}</a>`;
+                  contactContainer.appendChild(emailDiv);
+                }
+
+                // Add contact container to element
+                element.appendChild(contactContainer);
+              } catch (contactError) {
+                console.warn('Error adding contact info:', contactError);
+              }
+            }
+
+            // Add update method
+            const update = (newProps) => {
+              console.log('CollapsibleHeader update called with:', newProps);
+              try {
+                if (newProps.isCollapsed !== undefined) {
+                  if (newProps.isCollapsed) {
+                    element.classList.add('collapsible-header--collapsed');
+                  } else {
+                    element.classList.remove('collapsible-header--collapsed');
+                  }
+                }
+
+                if (newProps.isMobile !== undefined) {
+                  if (newProps.isMobile) {
+                    element.classList.add('collapsible-header--mobile');
+                  } else {
+                    element.classList.remove('collapsible-header--mobile');
+                  }
+                }
+              } catch (updateError) {
+                console.warn('Error updating header:', updateError);
+              }
+            };
+
+            // Return an object with getElement and update methods
+            return {
+              getElement: () => element,
+              update: update,
+            };
+          } catch (e) {
+            console.error('Error creating fallback CollapsibleHeader:', e);
+
+            // Create ultra-fallback if Header fails
+            const element = document.createElement('header');
+            element.className = 'ultra-fallback-header';
+            element.style.padding = '20px';
+            element.style.background = '#fff';
+            element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            element.style.position = 'sticky';
+            element.style.top = '0';
+            element.style.zIndex = '100';
+
+            const siteName = props.siteName || 'Svarog UI';
+            element.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="margin: 0; font-size: 1.5rem;">${siteName}</h1>
+                <nav>
+                  <a href="/" style="margin: 0 10px;">Home</a>
+                  <a href="/about" style="margin: 0 10px;">About</a>
+                  <a href="/contact" style="margin: 0 10px;">Contact</a>
+                </nav>
+              </div>
+            `;
+
+            return {
+              getElement: () => element,
+              update: () => {}, // No-op update function
+            };
+          }
         };
+      } catch (e) {
+        console.error('Error creating fallback CollapsibleHeader:', e);
       }
     }
 
@@ -104,7 +245,7 @@ export default class ComponentLoader {
         element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
 
         element.innerHTML = `
-        <h3 style="margin-top: 0; color: #fd7e14;">Contact Information</h3>
+        <h3 style="margin-top: 0; color: var(--theme-primary, #fd7e14);">Contact Information</h3>
         <div style="margin-bottom: 10px;">
           <strong>Location:</strong> ${props.location || ''}
         </div>

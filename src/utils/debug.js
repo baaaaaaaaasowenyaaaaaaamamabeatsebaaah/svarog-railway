@@ -373,3 +373,60 @@ export function analyzeComponents(svarogComponents) {
 
   return results;
 }
+
+/**
+ * Debug logger with ability to toggle logging
+ */
+export const debugLogger = {
+  enabled: true, // Set to false in production
+
+  /**
+   * Log a message if debug is enabled
+   * @param {string} message - Message to log
+   * @param {any} data - Optional data to log
+   */
+  log(message, data) {
+    if (!this.enabled) return;
+
+    if (data !== undefined) {
+      console.log(`[DEBUG] ${message}`, data);
+    } else {
+      console.log(`[DEBUG] ${message}`);
+    }
+  },
+
+  /**
+   * Log an error if debug is enabled
+   * @param {string} message - Error message
+   * @param {Error} error - Error object
+   */
+  error(message, error) {
+    if (!this.enabled) return;
+
+    console.error(`[DEBUG ERROR] ${message}`, error);
+  },
+
+  /**
+   * Log a warning if debug is enabled
+   * @param {string} message - Warning message
+   * @param {any} data - Optional data
+   */
+  warn(message, data) {
+    if (!this.enabled) return;
+
+    if (data !== undefined) {
+      console.warn(`[DEBUG WARN] ${message}`, data);
+    } else {
+      console.warn(`[DEBUG WARN] ${message}`);
+    }
+  },
+
+  /**
+   * Enable or disable debugging
+   * @param {boolean} enable - Whether to enable debugging
+   */
+  setEnabled(enable) {
+    this.enabled = !!enable;
+    console.log(`Debugging ${this.enabled ? 'enabled' : 'disabled'}`);
+  },
+};

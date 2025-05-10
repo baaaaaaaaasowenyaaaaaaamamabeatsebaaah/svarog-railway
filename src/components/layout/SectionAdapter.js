@@ -39,12 +39,18 @@ export class SectionAdapter extends ComponentAdapter {
       }
     }
 
+    // Fix the variant - only allow "minor" or leave it undefined
+    let variant = undefined;
+    if (data.variant === 'minor') {
+      variant = 'minor';
+    }
+
     return {
       title: data.title || data.headline || '',
       description: data.description || data.subheadline || '',
       children,
       id: data.id || data._uid,
-      variant: data.variant || data.style,
+      variant, // Only using 'minor' or undefined
       className: data.className || '',
       noPaddingBottom: !!data.noPaddingBottom,
     };
@@ -69,7 +75,26 @@ export class SectionAdapter extends ComponentAdapter {
     }
 
     try {
-      const props = this.transformProps();
+      // Prepare props with extra validation to avoid errors
+      const rawProps = this.transformProps();
+
+      // Create a clean props object with only the properties the Section component expects
+      const props = {
+        title: rawProps.title || '',
+        description: rawProps.description || '',
+        children: rawProps.children || '',
+        id: rawProps.id,
+        variant: rawProps.variant, // Should be 'minor' or undefined after transformProps
+        className: rawProps.className || '',
+      };
+
+      // Only add noPaddingBottom if it's a boolean
+      if (typeof rawProps.noPaddingBottom === 'boolean') {
+        props.noPaddingBottom = rawProps.noPaddingBottom;
+      }
+
+      // Log the cleaned props for debugging
+      console.log('Creating Section with props:', props);
 
       // Create a new instance of the Section component
       const sectionInstance = new Section(props);

@@ -1,6 +1,8 @@
 // src/components/registry.js
+import { CollapsibleHeaderAdapter } from './header/CollapsibleHeaderAdapter.js';
 import { HeaderAdapter } from './header/HeaderAdapter.js';
 import { ContactInfoAdapter } from './contact/ContactInfoAdapter.js';
+import { StickyContactIconsAdapter } from './contact/StickyContactIconsAdapter.js';
 import { NavigationAdapter } from './navigation/NavigationAdapter.js';
 import { TeaserAdapter } from './content/TeaserAdapter.js';
 import { GridAdapter } from './layout/GridAdapter.js';
@@ -30,10 +32,11 @@ export default class ComponentRegistry {
     return {
       // Header components
       Header: HeaderAdapter,
-      CollapsibleHeader: HeaderAdapter,
+      CollapsibleHeader: CollapsibleHeaderAdapter,
 
       // Contact components
       ContactInfo: ContactInfoAdapter,
+      StickyContactIcons: StickyContactIconsAdapter,
 
       // Navigation components
       Navigation: NavigationAdapter,
@@ -199,9 +202,31 @@ export default class ComponentRegistry {
 
       if (!storyblokData.component) {
         console.warn('Component type not specified in data:', storyblokData);
-        return createFallbackElement('Unknown', {
-          error: 'Component type not specified',
-        });
+
+        // Try to determine component type from the data structure
+        if (storyblokData.navigation && storyblokData.siteName) {
+          console.log('Data looks like a header, using CollapsibleHeader');
+          storyblokData.component = 'CollapsibleHeader';
+        } else if (
+          storyblokData.location &&
+          storyblokData.phone &&
+          storyblokData.email
+        ) {
+          console.log('Data looks like contact info, using ContactInfo');
+          storyblokData.component = 'ContactInfo';
+        } else if (storyblokData.items && Array.isArray(storyblokData.items)) {
+          console.log('Data looks like navigation, using Navigation');
+          storyblokData.component = 'Navigation';
+        } else if (storyblokData.title || storyblokData.content) {
+          console.log('Data looks like a section, using Section');
+          storyblokData.component = 'Section';
+        } else {
+          // If we can't determine the type, create a fallback
+          return createFallbackElement('Unknown', {
+            error: 'Component type not specified',
+            data: storyblokData,
+          });
+        }
       }
 
       const component = this.createComponent(storyblokData, options);

@@ -24,12 +24,36 @@ export class GridAdapter extends ComponentAdapter {
   transformProps() {
     const data = this.storyblokData;
 
+    // Validate alignItems value
+    let alignItems = data.align_items || data.alignItems;
+    const validAlignValues = ['start', 'end', 'center', 'stretch'];
+    if (alignItems && !validAlignValues.includes(alignItems)) {
+      console.warn(
+        `Invalid alignItems value: ${alignItems}. Must be one of: ${validAlignValues.join(
+          ', '
+        )}. Using default.`
+      );
+      alignItems = undefined; // Use default
+    }
+
+    // Validate justifyItems value
+    let justifyItems = data.justify_items || data.justifyItems;
+    const validJustifyValues = ['start', 'end', 'center', 'stretch'];
+    if (justifyItems && !validJustifyValues.includes(justifyItems)) {
+      console.warn(
+        `Invalid justifyItems value: ${justifyItems}. Must be one of: ${validJustifyValues.join(
+          ', '
+        )}. Using default.`
+      );
+      justifyItems = undefined; // Use default
+    }
+
     return {
       gap: data.gap || '1rem',
       columnGap: data.column_gap || data.columnGap,
       rowGap: data.row_gap || data.rowGap,
-      alignItems: data.align_items || data.alignItems,
-      justifyItems: data.justify_items || data.justifyItems,
+      alignItems: alignItems,
+      justifyItems: justifyItems,
       mobileReverse: !!data.mobile_reverse || !!data.mobileReverse,
       reverse: !!data.reverse,
       className: data.className || '',

@@ -5,6 +5,9 @@ import { createComponentWrapper } from '../../utils/svarogFactory.js';
  * Component for rendering content blocks with better error handling and loading states
  */
 export default class ContentBlockRenderer {
+  /**
+   * @param {Object} registry - Component registry
+   */
   constructor(registry) {
     this.registry = registry;
   }
@@ -30,18 +33,60 @@ export default class ContentBlockRenderer {
     const loadingElement = this.createLoadingElement();
     container.appendChild(loadingElement);
 
+    // Check if registry exists
+    if (!this.registry) {
+      console.error('No component registry available');
+      container.removeChild(loadingElement);
+
+      const errorElement = document.createElement('div');
+      errorElement.className = 'registry-error';
+      errorElement.style.padding = '20px';
+      errorElement.style.margin = '20px 0';
+      errorElement.style.backgroundColor = '#f8d7da';
+      errorElement.style.color = '#721c24';
+      errorElement.style.borderRadius = '4px';
+      errorElement.innerHTML = `
+        <h3>Component Registry Error</h3>
+        <p>Could not load component registry. Please try refreshing the page.</p>
+      `;
+      container.appendChild(errorElement);
+      return;
+    }
+
     // Process each block
     const elements = [];
     const errors = [];
 
     for (const block of blocks) {
       try {
+        if (!block) {
+          console.warn('Skipping undefined or null block');
+          continue;
+        }
+
+        if (!block.component) {
+          console.warn('Block missing component property:', block);
+          errors.push({
+            block,
+            error: new Error('Missing component property'),
+          });
+          continue;
+        }
+
+        // Check if registry getComponentElement method exists
+        if (typeof this.registry.getComponentElement !== 'function') {
+          throw new Error('Registry missing getComponentElement method');
+        }
+
         const element = await this.registry.getComponentElement(block);
         if (element) {
           elements.push(element);
         }
       } catch (error) {
-        console.error(`Error rendering block ${block.component}:`, error);
+        console.error(
+          `Error rendering block ${block?.component || 'unknown'}:`,
+          error
+        );
         errors.push({
           block,
           error,
@@ -50,7 +95,9 @@ export default class ContentBlockRenderer {
     }
 
     // Remove loading indicator
-    container.removeChild(loadingElement);
+    if (loadingElement.parentNode === container) {
+      container.removeChild(loadingElement);
+    }
 
     // Add successfully rendered elements
     for (const element of elements) {
@@ -144,7 +191,7 @@ export default class ContentBlockRenderer {
       <details>
         <summary>Component details</summary>
         <pre style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.05); overflow: auto;">${JSON.stringify(
-          block,
+          block || 'No data available',
           null,
           2
         )}</pre>

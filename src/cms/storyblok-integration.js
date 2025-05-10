@@ -4,6 +4,17 @@ import ComponentRegistry from '../components/registry.js';
 import ComponentLoader from '../components/loader.js';
 import ContentBlockRenderer from '../components/content/ContentBlockRenderer.js';
 
+// Preload svarog-ui for emergency fallback
+let svarogUILib = {};
+(async function loadSvarogBackup() {
+  try {
+    svarogUILib = await import('svarog-ui');
+    console.log('Preloaded Svarog UI backup:', Object.keys(svarogUILib));
+  } catch (err) {
+    console.error('Failed to preload Svarog UI:', err);
+  }
+})();
+
 /**
  * Integrates Storyblok with Svarog UI components
  */
@@ -26,14 +37,94 @@ export default class StoryblokIntegration {
     }
 
     try {
-      // Load Svarog UI components
-      const components = await this.componentLoader.loadComponents();
+      // Check if ComponentLoader has the needed method
+      if (
+        !this.componentLoader ||
+        typeof this.componentLoader.loadComponents !== 'function'
+      ) {
+        console.error(
+          'ComponentLoader missing loadComponents method - creating emergency fallback'
+        );
 
-      // Create component registry
-      this.registry = new ComponentRegistry(components);
+        // Create a fallback if the method doesn't exist
+        if (this.componentLoader) {
+          // Add the method if missing
+          this.componentLoader.loadComponents = async () => {
+            console.warn('Using fallback loadComponents implementation');
+            try {
+              // Direct import
+              const svarogUI = await import('svarog-ui');
+              console.log(
+                'Imported Svarog UI directly:',
+                Object.keys(svarogUI)
+              );
+              return svarogUI;
+            } catch (importError) {
+              console.error('Error in fallback import:', importError);
+              return svarogUILib || {}; // Use preloaded or empty object
+            }
+          };
+        } else {
+          // Create a minimal loader if none exists
+          this.componentLoader = {
+            async loadComponents() {
+              console.warn('Using minimal componentLoader implementation');
+              try {
+                const svarogUI = await import('svarog-ui');
+                return svarogUI;
+              } catch (error) {
+                console.error('Error loading components directly:', error);
+                return svarogUILib || {};
+              }
+            },
+          };
+        }
+      }
 
-      // Initialize content renderer
-      this.contentRenderer = new ContentBlockRenderer(this.registry);
+      // Load Svarog UI components with error handling
+      let components;
+      try {
+        components = await this.componentLoader.loadComponents();
+      } catch (loadError) {
+        console.error('Error loading components, using fallback:', loadError);
+
+        // Direct import as fallback
+        try {
+          components = await import('svarog-ui');
+        } catch (importError) {
+          console.error('Error in fallback direct import:', importError);
+          components = svarogUILib || {}; // Use preloaded or empty object
+        }
+      }
+
+      // Create component registry with fallback
+      try {
+        this.registry = new ComponentRegistry(components);
+      } catch (registryError) {
+        console.error('Error creating component registry:', registryError);
+        // Create minimal registry
+        this.registry = {
+          getComponentElement: async () => {
+            const fallback = document.createElement('div');
+            fallback.innerHTML = '<p>Component unavailable</p>';
+            return fallback;
+          },
+        };
+      }
+
+      // Initialize content renderer with fallback
+      try {
+        this.contentRenderer = new ContentBlockRenderer(this.registry);
+      } catch (rendererError) {
+        console.error('Error creating content renderer:', rendererError);
+        // Create minimal renderer
+        this.contentRenderer = {
+          renderBlocks: async (blocks, container) => {
+            container.innerHTML =
+              '<div style="padding: 20px; background: #f8f8f8;"><p>Content rendering unavailable</p></div>';
+          },
+        };
+      }
 
       this.initialized = true;
     } catch (error) {
@@ -49,11 +140,34 @@ export default class StoryblokIntegration {
    * @returns {Promise<HTMLElement>} - Component element
    */
   async getComponentElement(componentData, options = {}) {
-    if (!this.initialized) {
-      await this.initialize();
-    }
+    try {
+      if (!this.initialized) {
+        await this.initialize();
+      }
 
-    return this.registry.getComponentElement(componentData, options);
+      return this.registry.getComponentElement(componentData, options);
+    } catch (error) {
+      console.error(
+        `Error getting component element for ${componentData?.component}:`,
+        error
+      );
+
+      // Create fallback element
+      const fallback = document.createElement('div');
+      fallback.className = 'fallback-component';
+      fallback.style.padding = '15px';
+      fallback.style.margin = '10px 0';
+      fallback.style.border = '1px solid #ddd';
+      fallback.style.borderRadius = '4px';
+
+      const componentType = componentData?.component || 'Unknown';
+      fallback.innerHTML = `
+        <p><strong>${componentType} Component</strong></p>
+        <p>Unable to render component.</p>
+      `;
+
+      return fallback;
+    }
   }
 
   /**
@@ -73,6 +187,14 @@ export default class StoryblokIntegration {
         console.warn('No header data found');
         // Create a fallback header
         return this.createFallbackHeader();
+      }
+
+      // Ensure the component property is set
+      if (!headerData.component) {
+        console.warn(
+          'Header data missing component type, assuming CollapsibleHeader'
+        );
+        headerData.component = 'CollapsibleHeader';
       }
 
       // Create header element
@@ -149,7 +271,15 @@ export default class StoryblokIntegration {
       containerElement.className = 'content-blocks-container';
 
       // Use content renderer to render blocks
-      await this.contentRenderer.renderBlocks(content.body, containerElement);
+      if (
+        this.contentRenderer &&
+        typeof this.contentRenderer.renderBlocks === 'function'
+      ) {
+        await this.contentRenderer.renderBlocks(content.body, containerElement);
+      } else {
+        // Fallback rendering if contentRenderer is not available
+        containerElement.innerHTML = '<p>Content renderer not available</p>';
+      }
 
       // Return the container with rendered content
       return [containerElement];
@@ -200,11 +330,14 @@ export default class StoryblokIntegration {
       console.log(`Applying theme: ${themeName}`);
 
       // Switch theme using theme manager
-      const themeManager = this.componentLoader.getThemeManager();
+      const themeManager = this.componentLoader
+        ? this.componentLoader.getThemeManager()
+        : null;
+
       if (themeManager && typeof themeManager.switchTheme === 'function') {
         themeManager.switchTheme(themeName);
       } else {
-        // Fallback: apply theme class directly
+        // Fallback: Apply theme class directly
         document.documentElement.classList.remove(
           'default-theme',
           'cabalou-theme',
