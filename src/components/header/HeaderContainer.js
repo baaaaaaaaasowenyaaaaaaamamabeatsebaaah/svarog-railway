@@ -1,4 +1,4 @@
-// src/components/svarog/HeaderContainer.js
+// src/components/header/HeaderContainer.js
 /**
  * Container component for managing CollapsibleHeader state
  */

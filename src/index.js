@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show loading state
     appElement.innerHTML = `
       <div class="loading">
-        <h2>Loading content...</h2>
+        <h2>Loading header...</h2>
       </div>
     `;
 
@@ -43,38 +43,55 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (headerError) {
       console.error('Error loading header:', headerError);
-    }
 
-    // Create main content container
-    const mainContent = document.createElement('main');
-    mainContent.id = 'main-content';
-    appElement.appendChild(mainContent);
-
-    // Add footer
-    const footer = document.createElement('footer');
-    footer.id = 'app-footer';
-    footer.innerHTML = `
-      <div class="container">
-        <p>&copy; ${new Date().getFullYear()} Svarog UI</p>
-      </div>
-    `;
-    appElement.appendChild(footer);
-
-    // Load content for home page
-    try {
-      await storyblok.renderStory('home', mainContent);
-    } catch (contentError) {
-      console.error('Error loading content:', contentError);
-      mainContent.innerHTML = `
-        <div class="container">
-          <div class="error">
-            <h2>Error Loading Content</h2>
-            <p>${contentError.message}</p>
-            <button onclick="window.location.reload()">Retry</button>
-          </div>
+      // Show error in app container
+      appElement.innerHTML = `
+        <div class="error" style="text-align: center; padding: 40px;">
+          <h2>Header Loading Error</h2>
+          <p>${headerError.message || 'Unknown error occurred'}</p>
+          <p>Check the console for more details.</p>
+          <button onclick="window.location.reload()">Retry</button>
         </div>
       `;
     }
+
+    // Add a placeholder content section that's tall enough for scrolling
+    const placeholderContent = document.createElement('main');
+    placeholderContent.id = 'main-content';
+    placeholderContent.innerHTML = `
+  <div class="container">
+    <section class="content-section hero-section" style="text-align: center; padding: 120px 20px; background-color: #f8f9fa; margin-bottom: 40px; border-radius: 8px;">
+      <h2 style="font-size: 2.5rem; margin-bottom: 1.5rem;">Content Area</h2>
+      <p style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Content will be added later. Scroll down to see more sections and test the header collapse behavior.</p>
+    </section>
+    
+    <section class="content-section" style="height: 500px; background-color: #e9ecef; margin-bottom: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+      <h3 style="font-size: 2rem;">Section 1</h3>
+      <p>Scroll down to see the header collapse</p>
+    </section>
+    
+    <section class="content-section" style="height: 600px; background-color: #dee2e6; margin-bottom: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+      <h3 style="font-size: 2rem;">Section 2</h3>
+      <p>Keep scrolling to test the header behavior</p>
+    </section>
+    
+    <section class="content-section" style="height: 700px; background-color: #ced4da; margin-bottom: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+      <h3 style="font-size: 2rem;">Section 3</h3>
+      <p>Continue scrolling to ensure the header collapses properly</p>
+    </section>
+    
+    <section class="content-section" style="height: 800px; background-color: #adb5bd; margin-bottom: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+      <h3 style="font-size: 2rem;">Section 4</h3>
+      <p>Keep scrolling to test the header behavior on long pages</p>
+    </section>
+    
+    <section class="content-section" style="height: 500px; background-color: #6c757d; margin-bottom: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white;">
+      <h3 style="font-size: 2rem;">Section 5</h3>
+      <p>Final section to ensure plenty of scrolling space</p>
+    </section>
+  </div>
+`;
+    appElement.appendChild(placeholderContent);
   } catch (error) {
     console.error('Initialization error:', error);
 
