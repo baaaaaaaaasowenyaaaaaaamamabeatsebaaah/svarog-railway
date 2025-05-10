@@ -2,6 +2,10 @@
 import * as SvarogUI from 'svarog-ui';
 import StoryblokHelper from './utils/storyblokHelper.js';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
+import ThemeManager from './utils/themeManager.js';
+
+// Only import the main styles
+import 'svarog-ui/dist/styles.css';
 
 /**
  * Simple integration for Storyblok and Svarog UI focused on header functionality
@@ -11,6 +15,7 @@ export default class StoryblokIntegration {
     this.options = {
       token: null,
       version: 'published',
+      theme: 'muchandy', // Use just 'muchandy' not 'muchandy-theme'
       ...options,
     };
 
@@ -40,7 +45,9 @@ export default class StoryblokIntegration {
     // Initialize theme if available
     if (SvarogUI.switchTheme) {
       try {
-        SvarogUI.switchTheme('muchandy-theme');
+        // Pass just the theme name, not with '-theme' suffix
+        console.log(`Setting theme to: ${this.options.theme}`);
+        SvarogUI.switchTheme(this.options.theme);
       } catch (error) {
         console.warn('Error setting theme:', error);
       }

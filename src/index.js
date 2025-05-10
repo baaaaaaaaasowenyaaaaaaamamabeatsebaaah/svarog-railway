@@ -1,9 +1,7 @@
 // src/index.js
 import './styles.css';
 import StoryblokIntegration from './storyblokIntegration.js';
-
-// Apply muchandy-theme immediately
-document.documentElement.classList.add('muchandy-theme');
+import ThemeManager from './utils/themeManager.js';
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
@@ -12,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const storyblok = new StoryblokIntegration({
       token: process.env.STORYBLOK_PUBLIC_TOKEN || 'DITBZ0vdEovMYJLoYwPf2gtt',
       version: 'published',
+      theme: ThemeManager.THEMES.MUCHANDY, // Explicitly set the theme
     });
 
     // Initialize
