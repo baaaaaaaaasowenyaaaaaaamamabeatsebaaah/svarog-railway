@@ -6,6 +6,7 @@
 /* Global styles */
 :root {
   /* You can add custom CSS variables here to override Svarog defaults */
+  font-family: var(--font-family-primary);
 }
 
 /* Theme specific styles */

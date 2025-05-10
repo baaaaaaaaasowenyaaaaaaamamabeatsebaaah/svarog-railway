@@ -1,11 +1,6 @@
 // src/storyblokIntegration.js
 import * as SvarogUI from 'svarog-ui';
-import StoryblokHelper from './utils/storyblokHelper.js';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
-import ThemeManager from './utils/themeManager.js';
-
-// Only import the main styles
-import 'svarog-ui/dist/styles.css';
 
 /**
  * Simple integration for Storyblok and Svarog UI focused on header functionality

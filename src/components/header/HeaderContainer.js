@@ -1,6 +1,8 @@
 // src/components/header/HeaderContainer.js
+
 /**
  * Container component for managing CollapsibleHeader state
+ * Follows the container/presentational pattern for component design
  */
 export default class HeaderContainer {
   /**
@@ -21,322 +23,319 @@ export default class HeaderContainer {
     svarogComponents,
     showStickyIcons = false,
   }) {
-    try {
-      this.headerData = headerData || {};
-      this.HeaderComponent = headerComponent;
-      this.transformProps = transformProps;
-      this.collapseThreshold = collapseThreshold;
-      this.svarogComponents = svarogComponents;
-      this.showStickyIcons = showStickyIcons;
+    // Store configuration
+    this.headerData = headerData || {};
+    this.HeaderComponent = headerComponent;
+    this.transformProps = transformProps;
+    this.collapseThreshold = collapseThreshold;
+    this.svarogComponents = svarogComponents;
+    this.showStickyIcons = showStickyIcons;
 
-      // Initial state
-      this.state = {
-        isCollapsed: false,
-        isMobile: window.innerWidth <= 768,
-      };
+    // Set initial state
+    this.state = {
+      isCollapsed: false,
+      isMobile: this.checkIsMobile(),
+    };
 
-      // Create the header component
-      this.initialize();
-
-      // Set up event listeners
-      this.setupEventListeners();
-    } catch (error) {
-      console.error('Error in HeaderContainer constructor:', error);
-      throw error;
-    }
+    // Initialize component and event handlers
+    this.initialize();
   }
 
   /**
-   * Initialize the header component
+   * Check if viewport is mobile size
+   * @returns {boolean} - True if mobile viewport
+   */
+  checkIsMobile() {
+    return window.innerWidth <= 768;
+  }
+
+  /**
+   * Initialize the component
    */
   initialize() {
     try {
-      // Get initial props
-      let baseProps =
-        typeof this.transformProps === 'function' ? this.transformProps() : {};
+      // Transform the Storyblok data into props for the Svarog component
+      const baseProps = this.getTransformedProps();
 
-      // Add proper logo URL handling
-      if (
-        baseProps.logo &&
-        typeof baseProps.logo === 'object' &&
-        baseProps.logo.filename
-      ) {
-        baseProps.logo = baseProps.logo.filename;
-      }
-
-      if (
-        baseProps.compactLogo &&
-        typeof baseProps.compactLogo === 'object' &&
-        baseProps.compactLogo.filename
-      ) {
-        baseProps.compactLogo = baseProps.compactLogo.filename;
-      }
-
-      // Ensure navigation.items exists and is an array
-      if (!baseProps.navigation || !Array.isArray(baseProps.navigation.items)) {
-        console.log('Fixing navigation.items structure');
-        if (!baseProps.navigation) {
-          baseProps.navigation = { items: [] };
-        } else {
-          baseProps.navigation.items = Array.isArray(baseProps.navigation.items)
-            ? baseProps.navigation.items
-            : [];
-        }
-      }
-
-      // Create props with state
+      // Create props with state included
       const props = {
         ...baseProps,
         isCollapsed: this.state.isCollapsed,
         isMobile: this.state.isMobile,
+        onCallButtonClick: this.handleCallButtonClick.bind(this),
       };
 
-      // Create the component
+      // Create the header component
       this.headerComponent = new this.HeaderComponent(props);
 
-      // Check if it has the necessary methods
-      if (typeof this.headerComponent.getElement !== 'function') {
-        console.error('Header component does not have getElement method');
-
-        // Add getElement method if missing
-        this.headerComponent.getElement = () => {
-          if (this.headerComponent.element) {
-            console.log('Using element property as fallback');
-            return this.headerComponent.element;
-          }
-          console.warn('Creating fallback header element');
-          return this.createFallbackHeaderElement();
-        };
-      }
-
-      // Check if it has update method
-      if (typeof this.headerComponent.update !== 'function') {
-        console.warn(
-          'Header component does not have update method, adding basic implementation'
-        );
-
-        // Add basic update implementation
-        this.headerComponent.update = (newProps) => {
-          console.log('Header update called with props:', newProps);
-          // Try to manually update styles if possible
-          try {
-            const element = this.headerComponent.getElement();
-            if (element) {
-              if (newProps.isCollapsed) {
-                element.classList.add('collapsible-header--collapsed');
-              } else {
-                element.classList.remove('collapsible-header--collapsed');
-              }
-
-              if (newProps.isMobile) {
-                element.classList.add('collapsible-header--mobile');
-              } else {
-                element.classList.remove('collapsible-header--mobile');
-              }
-            }
-          } catch (updateError) {
-            console.error('Error manually updating header:', updateError);
-          }
-        };
-      }
-
-      // Create sticky icons if needed
+      // Setup sticky contact icons if enabled
       if (this.showStickyIcons) {
-        this.createStickyIcons();
+        this.setupStickyIcons();
+      }
+
+      // Set up event listeners for scroll and resize
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('Error initializing header container:', error);
+      this.headerComponent = this.createFallbackComponent();
+    }
+  }
+
+  /**
+   * Transform Storyblok data into props
+   * @returns {Object} - Transformed props
+   */
+  getTransformedProps() {
+    let baseProps = {};
+
+    try {
+      baseProps =
+        typeof this.transformProps === 'function'
+          ? this.transformProps()
+          : this.headerData;
+
+      // Process logo URLs
+      if (baseProps.logo && typeof baseProps.logo === 'object') {
+        baseProps.logo = baseProps.logo.filename || '';
+      }
+
+      if (baseProps.compactLogo && typeof baseProps.compactLogo === 'object') {
+        baseProps.compactLogo = baseProps.compactLogo.filename || '';
+      }
+
+      // Ensure navigation structure
+      if (!baseProps.navigation) {
+        baseProps.navigation = { items: [] };
+      } else if (!baseProps.navigation.items) {
+        baseProps.navigation.items = [];
       }
     } catch (error) {
-      console.error('Error in HeaderContainer.initialize:', error);
-      throw error;
+      console.error('Error transforming props:', error);
+      // Return minimal valid props on error
+      return {
+        siteName: this.headerData.siteName || 'Site Name',
+        navigation: { items: [] },
+        contactInfo: {
+          location: '',
+          phone: '',
+          email: '',
+          locationId: 'location',
+        },
+      };
     }
+
+    return baseProps;
   }
 
   /**
-   * Create a fallback header element if component creation fails
-   * @returns {HTMLElement} - Fallback header element
-   */
-  createFallbackHeaderElement() {
-    const element = document.createElement('header');
-    element.className = 'fallback-header collapsible-header';
-    element.style.padding = '20px';
-    element.style.background = '#fff';
-    element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-    element.style.position = 'sticky';
-    element.style.top = '0';
-    element.style.zIndex = '100';
-
-    const container = document.createElement('div');
-    container.className = 'container';
-    container.style.display = 'flex';
-    container.style.justifyContent = 'space-between';
-    container.style.alignItems = 'center';
-
-    const siteName =
-      this.headerData.siteName || this.headerData.SiteName || 'Svarog UI';
-
-    container.innerHTML = `
-      <div class="header-logo">
-        <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">
-          ${siteName}
-        </h1>
-      </div>
-      <nav class="header-nav">
-        <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
-        <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
-        <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
-      </nav>
-    `;
-
-    element.appendChild(container);
-    return element;
-  }
-
-  /**
-   * Create and add sticky contact icons if needed
-   */
-  createStickyIcons() {
-    if (!this.showStickyIcons || !this.headerData.contactInfo) {
-      return; // Don't show sticky icons
-    }
-
-    // Check if StickyContactIcons component is available in svarogComponents
-    const StickyContactIcons =
-      this.svarogComponents && this.svarogComponents.StickyContactIcons;
-
-    if (StickyContactIcons) {
-      try {
-        // Get contact info from header data
-        const contactInfo = this.headerData.contactInfo;
-
-        // Handle if contactInfo is an array (common in Storyblok)
-        let location = '',
-          phone = '',
-          email = '',
-          locationId = 'location';
-
-        if (Array.isArray(contactInfo) && contactInfo.length > 0) {
-          location = contactInfo[0].location || contactInfo[0].Location || '';
-          phone = contactInfo[0].phone || contactInfo[0].Phone || '';
-          email = contactInfo[0].email || contactInfo[0].Email || '';
-          locationId =
-            contactInfo[0].locationId ||
-            contactInfo[0].LocationId ||
-            'location';
-        } else {
-          location = contactInfo.location || contactInfo.Location || '';
-          phone = contactInfo.phone || contactInfo.Phone || '';
-          email = contactInfo.email || contactInfo.Email || '';
-          locationId =
-            contactInfo.locationId || contactInfo.LocationId || 'location';
-        }
-
-        // Create props for sticky icons
-        const props = {
-          location,
-          phone,
-          email,
-          locationId,
-          position: 'right', // Default position
-        };
-
-        // Create sticky icons component
-        const stickyIcons = new StickyContactIcons(props);
-
-        // Add to document when header is mounted
-        setTimeout(() => {
-          try {
-            const iconElement = stickyIcons.getElement();
-            if (iconElement && document.body) {
-              document.body.appendChild(iconElement);
-            }
-          } catch (error) {
-            console.error('Error adding sticky icons to document:', error);
-          }
-        }, 100);
-
-        // Store reference for cleanup
-        this.stickyIcons = stickyIcons;
-      } catch (error) {
-        console.error('Error creating sticky contact icons:', error);
-      }
-    } else {
-      console.warn('StickyContactIcons component not available in Svarog UI');
-    }
-  }
-
-  /**
-   * Set up event listeners for scroll and resize
+   * Set up event listeners
    */
   setupEventListeners() {
     // Throttled scroll handler
-    let lastScrollTime = 0;
-
-    const handleScroll = () => {
-      const now = Date.now();
-      if (now - lastScrollTime < 100) return; // Throttle to 100ms
-      lastScrollTime = now;
-
-      const scrollY = window.scrollY;
-      const shouldCollapse = scrollY > this.collapseThreshold;
-
-      if (shouldCollapse !== this.state.isCollapsed) {
-        this.setState({ isCollapsed: shouldCollapse });
-      }
-    };
+    this.lastScrollTime = 0;
+    this.scrollHandler = this.handleScroll.bind(this);
+    window.addEventListener('scroll', this.scrollHandler, { passive: true });
 
     // Debounced resize handler
-    let resizeTimeout;
+    this.resizeTimeout = null;
+    this.resizeHandler = this.handleResize.bind(this);
+    window.addEventListener('resize', this.resizeHandler);
 
-    const handleResize = () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile !== this.state.isMobile) {
-          this.setState({ isMobile });
-        }
-      }, 200);
-    };
-
-    // Add event listeners
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleResize);
-
-    // Store remove function for cleanup
-    this.removeEventListeners = () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
-    };
-
-    // Initial call to set correct state
-    handleScroll();
-    handleResize();
+    // Initial check
+    this.handleScroll();
   }
 
   /**
-   * Update state and component
-   * @param {Object} newState - New state object
+   * Handle scroll events
+   */
+  handleScroll() {
+    const now = Date.now();
+    if (now - this.lastScrollTime < 50) return; // Throttle to 50ms
+    this.lastScrollTime = now;
+
+    const scrollY = window.scrollY;
+    const shouldCollapse = scrollY > this.collapseThreshold;
+
+    if (shouldCollapse !== this.state.isCollapsed) {
+      this.setState({ isCollapsed: shouldCollapse });
+    }
+  }
+
+  /**
+   * Handle resize events
+   */
+  handleResize() {
+    clearTimeout(this.resizeTimeout);
+
+    this.resizeTimeout = setTimeout(() => {
+      const isMobile = this.checkIsMobile();
+      if (isMobile !== this.state.isMobile) {
+        this.setState({ isMobile });
+      }
+    }, 150);
+  }
+
+  /**
+   * Handle call button clicks
+   * @param {Event} event - Click event
+   */
+  handleCallButtonClick(event) {
+    // Add any analytics or tracking here
+    if (typeof this.headerData.onCallButtonClick === 'function') {
+      this.headerData.onCallButtonClick(event);
+    }
+  }
+
+  /**
+   * Set up sticky contact icons
+   */
+  setupStickyIcons() {
+    const StickyContactIcons = this.svarogComponents.StickyContactIcons;
+
+    if (!StickyContactIcons) {
+      console.warn('StickyContactIcons component not available');
+      return;
+    }
+
+    try {
+      // Extract contact info
+      const contactInfo = this.extractContactInfo();
+
+      // Create sticky icons component
+      this.stickyIcons = new StickyContactIcons({
+        location: contactInfo.location,
+        phone: contactInfo.phone,
+        email: contactInfo.email,
+        locationId: contactInfo.locationId || 'location',
+        position: 'right',
+      });
+
+      // Add to document
+      setTimeout(() => {
+        if (document.body) {
+          document.body.appendChild(this.stickyIcons.getElement());
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Error setting up sticky icons:', error);
+    }
+  }
+
+  /**
+   * Extract contact info from header data
+   * @returns {Object} - Contact info properties
+   */
+  extractContactInfo() {
+    let contactInfo = this.headerData.contactInfo || {};
+
+    // Handle array format (common in Storyblok)
+    if (Array.isArray(contactInfo) && contactInfo.length > 0) {
+      contactInfo = contactInfo[0];
+    }
+
+    return {
+      location: contactInfo.location || contactInfo.Location || '',
+      phone: contactInfo.phone || contactInfo.Phone || '',
+      email: contactInfo.email || contactInfo.Email || '',
+      locationId:
+        contactInfo.locationId || contactInfo.LocationId || 'location',
+    };
+  }
+
+  /**
+   * Update component state
+   * @param {Object} newState - New state properties
    */
   setState(newState) {
     this.state = { ...this.state, ...newState };
 
     try {
-      // Update component with new state
       if (
         this.headerComponent &&
         typeof this.headerComponent.update === 'function'
       ) {
-        this.headerComponent.update({
-          isCollapsed: this.state.isCollapsed,
-          isMobile: this.state.isMobile,
-        });
+        this.headerComponent.update(this.state);
+      } else {
+        // Manual update if update method not available
+        this.manuallyUpdateHeaderStyles();
       }
     } catch (error) {
-      console.error('Error updating header component:', error);
+      console.error('Error updating header state:', error);
     }
   }
 
   /**
-   * Get the header element
-   * @returns {HTMLElement} - Header element
+   * Manually update header styles if update method is not available
+   */
+  manuallyUpdateHeaderStyles() {
+    try {
+      const element = this.headerComponent.getElement();
+      if (!element) return;
+
+      // Apply collapsed state
+      if (this.state.isCollapsed) {
+        element.classList.add('collapsible-header--collapsed');
+      } else {
+        element.classList.remove('collapsible-header--collapsed');
+      }
+
+      // Apply mobile state
+      if (this.state.isMobile) {
+        element.classList.add('collapsible-header--mobile');
+      } else {
+        element.classList.remove('collapsible-header--mobile');
+      }
+    } catch (err) {
+      console.warn('Could not manually update header styles:', err);
+    }
+  }
+
+  /**
+   * Create a fallback component if the main one fails
+   * @returns {Object} - Fallback component
+   */
+  createFallbackComponent() {
+    return {
+      getElement: () => {
+        const element = document.createElement('header');
+        element.className = 'fallback-header';
+        element.style.padding = '20px';
+        element.style.background = '#fff';
+        element.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        element.style.position = 'sticky';
+        element.style.top = '0';
+        element.style.zIndex = '100';
+
+        const container = document.createElement('div');
+        container.className = 'container';
+        container.style.display = 'flex';
+        container.style.justifyContent = 'space-between';
+        container.style.alignItems = 'center';
+
+        const siteName = this.headerData.siteName || 'Svarog UI';
+
+        container.innerHTML = `
+          <div class="header-logo">
+            <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">
+              ${siteName}
+            </h1>
+          </div>
+          <nav class="header-nav">
+            <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
+            <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
+            <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
+          </nav>
+        `;
+
+        element.appendChild(container);
+        return element;
+      },
+    };
+  }
+
+  /**
+   * Get the DOM element for the component
+   * @returns {HTMLElement} - The DOM element
    */
   getElement() {
     try {
@@ -346,30 +345,41 @@ export default class HeaderContainer {
       ) {
         return this.headerComponent.getElement();
       }
-      return this.createFallbackHeaderElement();
     } catch (error) {
       console.error('Error getting header element:', error);
-      return this.createFallbackHeaderElement();
     }
+
+    // Return fallback if anything fails
+    return this.createFallbackComponent().getElement();
   }
 
   /**
-   * Clean up event listeners and components
+   * Clean up resources when component is destroyed
    */
   destroy() {
-    if (typeof this.removeEventListeners === 'function') {
-      this.removeEventListeners();
+    // Remove event listeners
+    if (this.scrollHandler) {
+      window.removeEventListener('scroll', this.scrollHandler);
     }
 
-    // Clean up sticky icons if they exist
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+    }
+
+    // Clear timeout if exists
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+
+    // Remove sticky icons if they exist
     if (this.stickyIcons) {
       try {
-        const iconElement = this.stickyIcons.getElement();
-        if (iconElement && iconElement.parentNode) {
-          iconElement.parentNode.removeChild(iconElement);
+        const element = this.stickyIcons.getElement();
+        if (element && element.parentNode) {
+          element.parentNode.removeChild(element);
         }
       } catch (error) {
-        console.error('Error removing sticky contact icons:', error);
+        console.error('Error removing sticky icons:', error);
       }
     }
   }
