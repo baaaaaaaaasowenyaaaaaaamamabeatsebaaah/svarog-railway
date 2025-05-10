@@ -32,6 +32,9 @@ export default class StoryblokIntegration {
       // Create component registry
       this.registry = new ComponentRegistry(components);
 
+      // Initialize content renderer
+      this.contentRenderer = new ContentBlockRenderer(this.registry);
+
       this.initialized = true;
     } catch (error) {
       console.error('Failed to initialize Storyblok integration:', error);
@@ -141,40 +144,35 @@ export default class StoryblokIntegration {
         return element ? [element] : [];
       }
 
-      // Process each content block
-      const contentBlocks = [];
-      for (const blockData of content.body) {
-        try {
-          const element = await this.getComponentElement(blockData);
-          if (element) {
-            contentBlocks.push(element);
-          }
-        } catch (blockError) {
-          console.error(
-            `Error processing block ${blockData.component}:`,
-            blockError
-          );
-          // Create fallback element for this block
-          const fallbackBlock = {
-            component: 'Section',
-            _uid:
-              blockData._uid ||
-              `fallback-${Math.random().toString(36).substring(2, 9)}`,
-            title: `${blockData.component} (Error)`,
-            content: `There was an error rendering this component: ${blockError.message}`,
-          };
+      // Create a container element to render content blocks
+      const containerElement = document.createElement('div');
+      containerElement.className = 'content-blocks-container';
 
-          const fallbackElement = await this.getComponentElement(fallbackBlock);
-          if (fallbackElement) {
-            contentBlocks.push(fallbackElement);
-          }
-        }
-      }
+      // Use content renderer to render blocks
+      await this.contentRenderer.renderBlocks(content.body, containerElement);
 
-      return contentBlocks;
+      // Return the container with rendered content
+      return [containerElement];
     } catch (error) {
       console.error(`Error getting content blocks for ${slug}:`, error);
-      return [];
+
+      // Create error container
+      const errorContainer = document.createElement('div');
+      errorContainer.className = 'content-error-container';
+      errorContainer.style.padding = '20px';
+      errorContainer.style.margin = '20px 0';
+      errorContainer.style.backgroundColor = '#f8d7da';
+      errorContainer.style.color = '#721c24';
+      errorContainer.style.borderRadius = '4px';
+      errorContainer.style.border = '1px solid #f5c6cb';
+
+      errorContainer.innerHTML = `
+        <h3 style="margin-top: 0;">Error Loading Content</h3>
+        <p>${error.message}</p>
+        <button style="background: #721c24; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;" onclick="window.location.reload()">Retry</button>
+      `;
+
+      return [errorContainer];
     }
   }
 
