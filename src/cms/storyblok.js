@@ -1,6 +1,7 @@
-// src/cms/storyblok.js
+// src/cms/storyblok.js (modified)
 import StoryblokClient from 'storyblok-js-client';
 import { storyblokInit, apiPlugin } from '@storyblok/js';
+import ApiClient from '../utils/apiClient.js';
 
 // Get tokens from environment variables
 const previewToken = process.env.STORYBLOK_PREVIEW_TOKEN;
@@ -19,6 +20,9 @@ const client = new StoryblokClient({
   },
 });
 
+// Create enhanced API client
+const enhancedClient = new ApiClient(client);
+
 /**
  * Initialize Storyblok
  */
@@ -34,7 +38,7 @@ export function initializeStoryblok() {
  */
 export default class StoryblokApi {
   constructor() {
-    this.client = client;
+    this.client = enhancedClient;
     // Use published version in production, draft in development
     this.version =
       process.env.NODE_ENV === 'production' ? 'published' : 'draft';

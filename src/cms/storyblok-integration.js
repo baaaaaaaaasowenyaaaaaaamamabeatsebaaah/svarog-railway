@@ -2,6 +2,7 @@
 import StoryblokApi from './storyblok.js';
 import ComponentRegistry from '../components/registry.js';
 import ComponentLoader from '../components/loader.js';
+import ContentBlockRenderer from '../components/content/ContentBlockRenderer.js';
 
 /**
  * Integrates Storyblok with Svarog UI components
@@ -12,6 +13,7 @@ export default class StoryblokIntegration {
     this.componentLoader = new ComponentLoader();
     this.registry = null;
     this.initialized = false;
+    this.contentRenderer = null;
   }
 
   /**
