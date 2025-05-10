@@ -1,5 +1,4 @@
 // src/components/header/HeaderContainer.js
-
 /**
  * Container component for managing CollapsibleHeader state
  */
@@ -12,6 +11,7 @@ export default class HeaderContainer {
    * @param {Function} options.transformProps - Function to transform data to props
    * @param {number} options.collapseThreshold - Scroll threshold for collapsing
    * @param {Object} options.svarogComponents - All available Svarog components
+   * @param {boolean} options.showStickyIcons - Whether to show sticky icons when collapsed
    */
   constructor({
     headerData,
@@ -19,13 +19,15 @@ export default class HeaderContainer {
     transformProps,
     collapseThreshold = 100,
     svarogComponents,
+    showStickyIcons = false,
   }) {
     try {
       console.log('Initializing HeaderContainer with:', {
-        headerData,
+        headerDataAvailable: !!headerData,
         collapseThreshold,
         headerComponentAvailable: !!headerComponent,
         transformPropsAvailable: !!transformProps,
+        showStickyIcons,
       });
 
       this.headerData = headerData || {};
@@ -33,6 +35,7 @@ export default class HeaderContainer {
       this.transformProps = transformProps;
       this.collapseThreshold = collapseThreshold;
       this.svarogComponents = svarogComponents;
+      this.showStickyIcons = showStickyIcons;
 
       // Initial state
       this.state = {
@@ -57,8 +60,18 @@ export default class HeaderContainer {
   initialize() {
     try {
       // Get initial props
-      const baseProps =
+      let baseProps =
         typeof this.transformProps === 'function' ? this.transformProps() : {};
+
+      // *** QUICK FIX - Ensure navigation.items exists ***
+      if (!baseProps.navigation || !baseProps.navigation.items) {
+        console.log('Adding default navigation.items because it was missing');
+        if (!baseProps.navigation) {
+          baseProps.navigation = { items: [] };
+        } else {
+          baseProps.navigation.items = [];
+        }
+      }
 
       // Create props with state
       const props = {
@@ -67,12 +80,18 @@ export default class HeaderContainer {
         isMobile: this.state.isMobile,
       };
 
-      console.log('Creating HeaderComponent with props:', props);
+      console.log(
+        'Creating HeaderComponent with props:',
+        JSON.stringify(props, null, 2)
+      );
 
       // Create the component
       this.headerComponent = new this.HeaderComponent(props);
 
-      console.log('HeaderComponent created:', this.headerComponent);
+      console.log(
+        'HeaderComponent created:',
+        typeof this.headerComponent === 'object' ? 'Successfully' : 'Failed'
+      );
 
       // Check if it has the necessary methods
       if (typeof this.headerComponent.getElement !== 'function') {
@@ -121,7 +140,9 @@ export default class HeaderContainer {
       }
 
       // Create sticky icons if needed
-      this.createStickyIcons();
+      if (this.showStickyIcons) {
+        this.createStickyIcons();
+      }
     } catch (error) {
       console.error('Error in HeaderContainer.initialize:', error);
       throw error;
@@ -172,16 +193,9 @@ export default class HeaderContainer {
    * Create and add sticky contact icons if needed
    */
   createStickyIcons() {
-    // Check if we should show sticky icons
-    const showStickyIcons =
-      this.headerData.showStickyIcons || this.headerData.ShowStickyIcons;
-
-    if (!showStickyIcons || !this.headerData.contactInfo) {
+    if (!this.showStickyIcons || !this.headerData.contactInfo) {
       return; // Don't show sticky icons
     }
-
-    // Get contact info from header data
-    const contactInfo = this.headerData.contactInfo || {};
 
     // Check if StickyContactIcons component is available in svarogComponents
     const StickyContactIcons =
@@ -189,13 +203,37 @@ export default class HeaderContainer {
 
     if (StickyContactIcons) {
       try {
+        // Get contact info from header data
+        const contactInfo = this.headerData.contactInfo;
+
+        // Handle if contactInfo is an array (common in Storyblok)
+        let location = '',
+          phone = '',
+          email = '',
+          locationId = 'location';
+
+        if (Array.isArray(contactInfo) && contactInfo.length > 0) {
+          location = contactInfo[0].location || contactInfo[0].Location || '';
+          phone = contactInfo[0].phone || contactInfo[0].Phone || '';
+          email = contactInfo[0].email || contactInfo[0].Email || '';
+          locationId =
+            contactInfo[0].locationId ||
+            contactInfo[0].LocationId ||
+            'location';
+        } else {
+          location = contactInfo.location || contactInfo.Location || '';
+          phone = contactInfo.phone || contactInfo.Phone || '';
+          email = contactInfo.email || contactInfo.Email || '';
+          locationId =
+            contactInfo.locationId || contactInfo.LocationId || 'location';
+        }
+
         // Create props for sticky icons
         const props = {
-          location: contactInfo.location || contactInfo.Location || '',
-          phone: contactInfo.phone || contactInfo.Phone || '',
-          email: contactInfo.email || contactInfo.Email || '',
-          locationId:
-            contactInfo.locationId || contactInfo.LocationId || 'location',
+          location,
+          phone,
+          email,
+          locationId,
           position: 'right', // Default position
         };
 
@@ -204,9 +242,13 @@ export default class HeaderContainer {
 
         // Add to document when header is mounted
         setTimeout(() => {
-          const iconElement = stickyIcons.getElement();
-          if (iconElement && document.body) {
-            document.body.appendChild(iconElement);
+          try {
+            const iconElement = stickyIcons.getElement();
+            if (iconElement && document.body) {
+              document.body.appendChild(iconElement);
+            }
+          } catch (error) {
+            console.error('Error adding sticky icons to document:', error);
           }
         }, 100);
 

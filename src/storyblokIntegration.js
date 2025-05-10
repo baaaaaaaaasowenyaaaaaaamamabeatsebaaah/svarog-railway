@@ -341,6 +341,11 @@ export default class StoryblokIntegration {
       const collapseThreshold =
         configStory.content.header_collapse_threshold || 100;
 
+      console.log(
+        'Raw header data from Storyblok:',
+        JSON.stringify(headerData, null, 2)
+      );
+
       console.log('Creating header with props:', {
         ...headerData,
         collapseThreshold,

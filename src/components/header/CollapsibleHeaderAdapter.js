@@ -24,19 +24,38 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
     // Check if we have nested content (when data comes directly from Storyblok API)
     const content = data.content || data;
 
+    // Log original data for debugging
+    console.log(
+      'Original Storyblok header data:',
+      JSON.stringify(content, null, 2)
+    );
+
+    // Process logo URLs correctly
+    const logoUrl = this.assetUrl(content.logo || content.Logo);
+    const compactLogoUrl = this.assetUrl(
+      content.compactLogo || content.CompactLogo
+    );
+
+    // Transform navigation data with improved handling
+    const navigationData = content.navigation || content.Navigation || [];
+    console.log('Navigation data before transform:', navigationData);
+    const transformedNavigation = this.transformNavigation(navigationData);
+    console.log(
+      'Navigation data after transform:',
+      JSON.stringify(transformedNavigation, null, 2)
+    );
+
     // Start with basic props
     const props = {
       siteName: content.siteName || content.SiteName || '',
-      navigation: this.transformNavigation(
-        content.navigation || content.Navigation
-      ),
+      navigation: transformedNavigation,
       contactInfo: this.transformContactInfo(
         content.contactInfo || content.ContactInfo
       ),
-      logo: this.assetUrl(content.logo || content.Logo),
-      compactLogo: this.assetUrl(content.compactLogo || content.CompactLogo),
+      logo: logoUrl,
+      compactLogo: compactLogoUrl,
       callButtonText:
-        content.callButtonText || content.CallButtonText || 'Contact Us',
+        content.callButtonText || content.CallButtonText || 'Anrufen',
       className: '',
       isCollapsed: false, // Initial state, will be managed by container
       isMobile: false, // Initial state, will be managed by container
@@ -47,30 +66,64 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
   }
 
   /**
-   * Transform navigation data
-   * @param {Object} navigationData - Navigation data from Storyblok
-   * @returns {Object} - Transformed navigation data
+   * Transform navigation data with advanced structure handling
+   * @param {Object|Array} navigationData - Navigation data from Storyblok
+   * @returns {Object} - Transformed navigation data with items array
    */
   transformNavigation(navigationData) {
     if (!navigationData) {
-      return { items: [] };
+      return { items: [] }; // Return empty items array as default
     }
 
-    // If navigationData is already an object with items, use it
-    if (navigationData.items) {
-      return {
-        items: Array.isArray(navigationData.items)
-          ? navigationData.items.map(this.transformNavigationItem.bind(this))
-          : [],
-      };
+    // Extract navigation items from potentially complex structure
+    const navItems = this.extractNavigationItems(navigationData);
+
+    // Transform each navigation item
+    const transformedItems = navItems
+      .map((item) => this.transformNavigationItem(item))
+      .filter(Boolean); // Filter out null items
+
+    return { items: transformedItems };
+  }
+
+  /**
+   * Extract navigation items from potentially complex Storyblok structure
+   * @param {Object|Array|null} data - Data from Storyblok
+   * @returns {Array} - Array of navigation items
+   */
+  extractNavigationItems(data) {
+    if (!data) return [];
+
+    // If it's an array, use it directly
+    if (Array.isArray(data)) return data;
+
+    // If it has an items array, use that
+    if (data.items && Array.isArray(data.items)) return data.items;
+
+    // If it's an object with navigation data
+    if (typeof data === 'object') {
+      // Look for common Storyblok navigation paths
+      for (const key of [
+        'navigation',
+        'items',
+        'nav',
+        'navItems',
+        'links',
+        'menuItems',
+      ]) {
+        if (data[key] && Array.isArray(data[key])) {
+          return data[key];
+        }
+      }
+
+      // If there's a single item that looks like a navigation item
+      if (data.label || data.href || data.url) {
+        return [data];
+      }
     }
 
-    // Otherwise, try to transform items if they exist
-    const items = Array.isArray(navigationData)
-      ? navigationData.map(this.transformNavigationItem.bind(this))
-      : [];
-
-    return { items };
+    console.warn('Could not extract navigation items from:', data);
+    return [];
   }
 
   /**
@@ -85,38 +138,23 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
     const navItem = {
       id: item._uid || `nav-${Math.random().toString(36).substring(2, 9)}`,
       label: item.label || item.Label || 'Untitled',
-      href: this.linkUrl(item.href || item.URL || '/'),
+      href: this.linkUrl(item.href || item.url || item.URL || '/'),
       disabled: !!item.disabled || !!item.Disabled,
     };
 
     // Process subitems if available
     if (Array.isArray(item.items) && item.items.length > 0) {
-      navItem.items = item.items.map((subItem) =>
-        this.transformSubNavigationItem(subItem)
-      );
+      navItem.items = item.items
+        .map((subItem) => this.transformNavigationItem(subItem))
+        .filter(Boolean); // Filter out null items
     }
 
     return navItem;
   }
 
   /**
-   * Transform a sub-navigation item
-   * @param {Object} subItem - Storyblok sub-navigation item
-   * @returns {Object} - Transformed item
-   */
-  transformSubNavigationItem(subItem) {
-    return {
-      id:
-        subItem._uid || `subnav-${Math.random().toString(36).substring(2, 9)}`,
-      label: subItem.label || subItem.Label || 'Untitled',
-      href: this.linkUrl(subItem.href || subItem.URL || '/'),
-      disabled: !!subItem.disabled || !!subItem.Disabled,
-    };
-  }
-
-  /**
    * Transform contact info data
-   * @param {Object} contactData - Contact info from Storyblok
+   * @param {Object|Array} contactData - Contact info from Storyblok
    * @returns {Object} - Transformed contact info
    */
   transformContactInfo(contactData) {
@@ -126,6 +164,18 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
         phone: '',
         email: '',
         locationId: 'location',
+      };
+    }
+
+    // Handle if contactData is an array (common in Storyblok)
+    if (Array.isArray(contactData) && contactData.length > 0) {
+      const firstContact = contactData[0];
+      return {
+        location: firstContact.location || firstContact.Location || '',
+        phone: firstContact.phone || firstContact.Phone || '',
+        email: firstContact.email || firstContact.Email || '',
+        locationId:
+          firstContact.locationId || firstContact.LocationId || 'location',
       };
     }
 
@@ -144,12 +194,11 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
    * @returns {Object} - The CollapsibleHeader component with container
    */
   createComponent(svarogComponents) {
-    // Look for the CollapsibleHeader component in different places
-    const CollapsibleHeader =
-      this.findCollapsibleHeaderComponent(svarogComponents);
+    const CollapsibleHeader = svarogComponents.CollapsibleHeader;
 
     if (!CollapsibleHeader) {
       console.error('CollapsibleHeader component not found in Svarog UI');
+      console.log('Available components:', Object.keys(svarogComponents));
       return this.createFallbackHeader(svarogComponents);
     }
 
@@ -160,13 +209,20 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
         this.storyblokData.CollapseThreshold ||
         100;
 
-      // Create a new HeaderContainer that will manage the state and events
+      // Check if we should show sticky icons
+      const showStickyIcons =
+        this.storyblokData.showStickyIcons ||
+        this.storyblokData.ShowStickyIcons ||
+        false;
+
+      // Create a HeaderContainer that will manage state for the CollapsibleHeader
       const headerContainer = new HeaderContainer({
         headerData: this.storyblokData,
         headerComponent: CollapsibleHeader,
         transformProps: this.transformProps.bind(this),
         collapseThreshold,
         svarogComponents,
+        showStickyIcons,
       });
 
       return headerContainer;
@@ -174,35 +230,6 @@ export class CollapsibleHeaderAdapter extends ComponentAdapter {
       console.error('Error creating CollapsibleHeader:', error);
       return this.createFallbackHeader(svarogComponents);
     }
-  }
-
-  /**
-   * Find the CollapsibleHeader component in the Svarog components
-   * @param {Object} svarogComponents - Svarog UI components
-   * @returns {Function|null} - The CollapsibleHeader component or null if not found
-   */
-  findCollapsibleHeaderComponent(svarogComponents) {
-    // Check if it's directly in the components object
-    if (svarogComponents.CollapsibleHeader) {
-      return svarogComponents.CollapsibleHeader;
-    }
-
-    // Look for it in different casing formats
-    if (svarogComponents.collapsibleHeader) {
-      return svarogComponents.collapsibleHeader;
-    }
-
-    // Import from the found path
-    try {
-      // Import from the path we have in the documents
-      const collapsibleHeaderPath = './CollapsibleHeader/CollapsibleHeader.js';
-      return svarogComponents[collapsibleHeaderPath] || null;
-    } catch (error) {
-      console.warn('Error importing CollapsibleHeader:', error);
-      return null;
-    }
-
-    return null;
   }
 
   /**
