@@ -1,6 +1,7 @@
 // src/storyblokIntegration.js
 import * as SvarogUI from 'svarog-ui';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
+import { MuchandyHeroAdapter } from './components/MuchandyHero/MuchandyHeroAdapter.js';
 
 /**
  * Simple integration for Storyblok and Svarog UI focused on header functionality
@@ -16,6 +17,7 @@ export default class StoryblokIntegration {
 
     this.componentsRegistry = {
       ...SvarogUI,
+      MuchandyHero: SvarogUI.MuchandyHero || null,
     };
 
     // Add Grid.Column to registry if available
@@ -26,6 +28,7 @@ export default class StoryblokIntegration {
     this.cache = {};
     this.componentAdapters = {
       CollapsibleHeader: CollapsibleHeaderAdapter,
+      MuchandyHero: MuchandyHeroAdapter,
       // Add more component adapters here as needed
     };
   }
@@ -216,6 +219,17 @@ export default class StoryblokIntegration {
             container.appendChild(componentElement);
           }
         });
+
+        if (
+          story.content.hero &&
+          Array.isArray(story.content.hero) &&
+          story.content.hero.length > 0
+        ) {
+          const heroComponent = this.renderComponent(story.content.hero[0]);
+          if (heroComponent) {
+            container.appendChild(heroComponent);
+          }
+        }
       } else if (story.content.text) {
         // Handle simple text content
         const textContainer = document.createElement('div');

@@ -1,6 +1,6 @@
 // src/utils/contentManager.js
 import Router from './router.js';
-import StoryblokIntegration from '../storyblokIntegration.js';
+import DebugHelper from './debugHelper.js';
 
 export default class ContentManager {
   constructor(options = {}) {
@@ -45,8 +45,11 @@ export default class ContentManager {
   }
 
   init() {
-    // Register routes
+    // Register routes first
     this.registerRoutes();
+
+    // Initialize router after routes are registered
+    this.router.init();
 
     // Add event listeners for retry buttons
     this.contentElement.addEventListener('click', (event) => {
@@ -84,6 +87,8 @@ export default class ContentManager {
         return this.loadPage(slug);
       });
 
+      // Add debug logs
+      DebugHelper.logRoutes(this.router);
       console.log('Routes registered successfully');
     } catch (error) {
       console.error('Error registering routes:', error);

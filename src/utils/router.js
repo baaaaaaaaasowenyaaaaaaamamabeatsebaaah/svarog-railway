@@ -14,18 +14,18 @@ export default class Router {
       options.errorTemplate ||
       '<div class="error-content">Error loading content</div>';
 
+    this.defaultHandler = null;
+    this.wildcardHandler = null;
     this.currentPath = window.location.pathname;
+    this.initialized = false;
 
     // Bind methods
     this.handleNavigation = this.handleNavigation.bind(this);
     this.navigate = this.navigate.bind(this);
-
-    // Initialize
-    this.init();
   }
 
   init() {
-    // Handle initial route
+    // Handle popstate events (browser back/forward)
     window.addEventListener('popstate', this.handleNavigation);
 
     // Intercept link clicks
@@ -51,22 +51,26 @@ export default class Router {
       this.navigate(link.pathname);
     });
 
-    // Handle initial route
-    this.handleNavigation();
+    this.initialized = true;
+
+    // Only handle initial route if already initialized
+    if (this.initialized) {
+      this.handleNavigation();
+    }
   }
 
   registerRoute(path, handler) {
-    // Special case for the default route
-    if (path === '/' || path === '*') {
-      // Store default route handler separately
+    // Handle different route types correctly
+    if (path === '/') {
       this.defaultHandler = handler;
+    } else if (path === '*') {
+      this.wildcardHandler = handler;
     } else {
       this.routes.set(path, handler);
     }
     return this;
   }
 
-  // Update the handleNavigation method
   async handleNavigation() {
     const path = window.location.pathname;
 
@@ -78,12 +82,19 @@ export default class Router {
     // Show loading state
     this.contentElement.innerHTML = this.loadingTemplate;
 
-    // Find route handler
-    let handler = this.routes.get(path);
+    let handler = null;
 
-    // If no specific handler is found, use the default handler
-    if (!handler && this.defaultHandler) {
+    // Try to find a specific route handler first
+    if (this.routes.has(path)) {
+      handler = this.routes.get(path);
+    }
+    // For root path, use the default handler if available
+    else if (path === '/' && this.defaultHandler) {
       handler = this.defaultHandler;
+    }
+    // For any other path, use the wildcard handler if available
+    else if (this.wildcardHandler) {
+      handler = this.wildcardHandler;
     }
 
     if (!handler) {
@@ -93,7 +104,7 @@ export default class Router {
     }
 
     try {
-      // Execute route handler
+      // Execute route handler with the current path
       const content = await handler(path);
 
       // Update content
@@ -121,6 +132,7 @@ export default class Router {
         this.errorTemplate + `<p>${error.message}</p>`;
     }
   }
+
   navigate(path) {
     if (path === this.currentPath) return;
 
