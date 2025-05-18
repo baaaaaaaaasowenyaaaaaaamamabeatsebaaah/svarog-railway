@@ -2,12 +2,33 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const Dotenv = require('dotenv-webpack');
 const webpack = require('webpack');
+const dotenv = require('dotenv');
 
 module.exports = (env, argv) => {
+  // Determine if we're in production mode
   const isProduction = argv.mode === 'production';
-  const mode = isProduction ? 'production' : 'development';
+
+  // Load environment variables from .env file
+  let envVars = {};
+  try {
+    const env = dotenv.config().parsed || {};
+    envVars = Object.keys(env).reduce((prev, key) => {
+      // Don't include NODE_ENV from .env
+      if (key !== 'NODE_ENV') {
+        prev[`process.env.${key}`] = JSON.stringify(env[key]);
+      }
+      return prev;
+    }, {});
+  } catch (error) {
+    // .env file not found, that's okay in production
+    console.log('No .env file found or error parsing it.');
+  }
+
+  // Always define NODE_ENV based on webpack mode
+  envVars['process.env.NODE_ENV'] = JSON.stringify(
+    isProduction ? 'production' : 'development'
+  );
 
   return {
     entry: './src/index.js',
@@ -17,7 +38,7 @@ module.exports = (env, argv) => {
       clean: true,
       publicPath: '/',
     },
-    mode,
+    mode: isProduction ? 'production' : 'development',
     module: {
       rules: [
         {
@@ -30,19 +51,8 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
-      // Use Dotenv to load environment variables
-      new Dotenv({
-        systemvars: true, // Load all system variables
-        defaults: false, // Don't try to load .env.defaults
-      }),
-
-      // Define NODE_ENV only once to avoid conflicts
-      new webpack.DefinePlugin({
-        // Only set NODE_ENV if not already set by Dotenv
-        ...(process.env.NODE_ENV
-          ? {}
-          : { 'process.env.NODE_ENV': JSON.stringify(mode) }),
-      }),
+      // Directly define environment variables instead of using Dotenv plugin
+      new webpack.DefinePlugin(envVars),
 
       new HtmlWebpackPlugin({
         template: './public/index.html',
@@ -66,9 +76,35 @@ module.exports = (env, argv) => {
       },
     },
     devtool: isProduction ? false : 'source-map',
-    // Add this to reduce the warning noise in the console
+
+    // Silence performance warnings
+    performance: {
+      hints: false,
+    },
+
+    // Hide all warnings
     stats: {
-      warningsFilter: [/Failed to parse source map/, /Module not found/],
+      warnings: false,
+      children: false,
+    },
+
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+          styles: {
+            name: 'styles',
+            test: /\.css$/,
+            chunks: 'all',
+            enforce: true,
+          },
+        },
+      },
     },
   };
 };
