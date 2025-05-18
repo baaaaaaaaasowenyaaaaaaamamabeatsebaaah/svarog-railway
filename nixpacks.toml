@@ -1,16 +1,4 @@
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
-
-[phases.install]
-cmds = ["npm ci --production=false"]
-
-[phases.build]
-cmds = ["npm run build"]
-
-[start]
-cmd = "npm start"
-
-[phases.setup]
 nixPkgs = [
   "nodejs-18_x",
   "xorg.libX11",
@@ -37,3 +25,12 @@ nixPkgs = [
 
 [phases.setup.env]
 CHROME_BIN = "${pkgs.chromium}/bin/chromium"
+
+[phases.install]
+cmds = ["npm ci --production=false"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"
