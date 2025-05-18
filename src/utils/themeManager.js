@@ -1,4 +1,6 @@
 // src/utils/themeManager.js
+import StorageHelper from './storageHelper.js';
+
 /**
  * Manages theme initialization and switching for Svarog UI
  */
@@ -12,6 +14,8 @@ export default class ThemeManager {
     CABALOU: 'cabalou',
   };
 
+  static storage = new StorageHelper('local', 'svarog_');
+
   /**
    * Initialize the theme system and set the default theme
    * @param {Object} svarogUI - The Svarog UI library
@@ -20,12 +24,17 @@ export default class ThemeManager {
    */
   static initializeTheme(svarogUI, themeName = ThemeManager.THEMES.MUCHANDY) {
     try {
+      // Try to get saved theme first
+      const savedTheme = ThemeManager.storage.get('theme');
+      const themeToUse = savedTheme || themeName;
+
+      console.log(`Initializing theme, using ${themeToUse}`);
+
       // First try direct svarogUI parameter
       let themeApplied = false;
 
       if (svarogUI && typeof svarogUI.switchTheme === 'function') {
-        console.log(`Initializing Svarog UI with theme: ${themeName}`);
-        svarogUI.switchTheme(themeName);
+        svarogUI.switchTheme(themeToUse);
         themeApplied = true;
       }
       // Try global SvarogUI
@@ -67,8 +76,9 @@ export default class ThemeManager {
       }
 
       // If we couldn't apply the theme through the API, use CSS class fallback
-      if (!themeApplied) {
-        this.applyFallbackTheming(themeName);
+      if (themeApplied) {
+        ThemeManager.storage.set('theme', themeToUse);
+        console.log(`Saved theme "${themeToUse}" to storage`);
       }
 
       return themeApplied;
@@ -79,6 +89,21 @@ export default class ThemeManager {
       this.applyFallbackTheming(themeName);
       return false;
     }
+  }
+
+  static switchTheme(svarogUI, themeName) {
+    const success = ThemeManager.initializeTheme(svarogUI, themeName);
+    if (success) {
+      // Remove all theme classes first
+      if (typeof document !== 'undefined') {
+        Object.values(ThemeManager.THEMES).forEach((theme) => {
+          document.documentElement.classList.remove(`${theme}-theme`);
+        });
+      }
+      // Apply new theme
+      ThemeManager.applyFallbackTheming(themeName);
+    }
+    return success;
   }
 
   // Add a new method for CSS fallback theming

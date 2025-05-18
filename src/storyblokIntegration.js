@@ -1,6 +1,7 @@
 // src/storyblokIntegration.js
 import * as SvarogUI from 'svarog-ui';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
+import ContentCache from '../utils/contentCache.js';
 
 /**
  * Simple integration for Storyblok and Svarog UI focused on header functionality
@@ -11,8 +12,16 @@ export default class StoryblokIntegration {
       token: null,
       version: 'published',
       theme: 'muchandy', // Use just 'muchandy' not 'muchandy-theme'
+      cacheEnabled: true, // Enable caching by default
+      cacheTTL: 5 * 60 * 1000, // 5 minutes TTL
       ...options,
     };
+
+    // Initialize content cache
+    this.contentCache = new ContentCache({
+      enabled: this.options.cacheEnabled,
+      maxAge: this.options.cacheTTL,
+    });
 
     this.componentsRegistry = {
       ...SvarogUI,
@@ -70,8 +79,12 @@ export default class StoryblokIntegration {
       console.log(`Fetching story: ${slug}`);
 
       // Check cache first
-      if (this.cache[slug]) {
-        return this.cache[slug];
+      const cacheKey = `story:${slug}:${this.options.version}`;
+      const cachedStory = this.contentCache.get(cacheKey);
+
+      if (cachedStory) {
+        console.log(`Using cached story: ${slug}`);
+        return cachedStory;
       }
 
       // Make sure token is available
@@ -110,6 +123,7 @@ export default class StoryblokIntegration {
       this.cache[slug] = data.story;
       console.log(`Story found: ${slug}`);
 
+      this.contentCache.set(cacheKey, data.story);
       return data.story;
     } catch (error) {
       // Special handling for navigation cancellation

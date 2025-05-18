@@ -91,7 +91,20 @@ export default class Router {
       }
 
       // Show loading state
-      this.contentElement.innerHTML = this.loadingTemplate;
+      import('../components/ui/LoadingIndicator.js')
+        .then((module) => {
+          const LoadingIndicator = module.default;
+          const loader = new LoadingIndicator({
+            type: 'bar',
+            message: 'Loading content...',
+          });
+          this.contentElement.innerHTML = '';
+          this.contentElement.appendChild(loader.getElement());
+        })
+        .catch(() => {
+          // Fallback to simple loading if module import fails
+          this.contentElement.innerHTML = this.loadingTemplate;
+        });
 
       let handler = null;
 
