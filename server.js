@@ -13,6 +13,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Early in the file, add:
+console.log('Server starting...');
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`PORT: ${process.env.PORT || 3000}`);
+
+// Then make sure your app listens on the PORT from environment variables:
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
 // Enhanced security configuration
 const helmetConfig = {
   contentSecurityPolicy: {
