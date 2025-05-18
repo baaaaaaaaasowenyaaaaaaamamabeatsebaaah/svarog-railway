@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -24,6 +23,7 @@ model Device {
   @@unique([name, manufacturerId])
 }
 
+
 model Action {
   id            Int       @id @default(autoincrement())
   name          String
@@ -31,7 +31,7 @@ model Action {
   deviceId      Int
   prices        Price[]
 
-  @@index([name, deviceId])
+  @@index([name, deviceId]) // Adding an index for faster querying
 }
 
 model Price {
@@ -41,3 +41,25 @@ model Price {
   price         Int?
   dateCollected DateTime
 }
+
+model UniqueManufacturer {
+  id       Int           @id @default(autoincrement())
+  name     String        @unique
+  devices  UniqueDevice[]
+}
+
+model UniqueDevice {
+  id                      Int        @id @default(autoincrement())
+  artikelNummer            String     @unique
+  artikelBezeichnung       String
+  ean                     String?
+  beschreibung             String?
+  herstellerArtikelNummer  String?
+  einkaufsPreis            Float
+  nettPreis                Float
+  gewicht                  Float?
+  uniqueManufacturerId     Int
+  uniqueManufacturer       UniqueManufacturer @relation(fields: [uniqueManufacturerId], references: [id])
+}
+
+

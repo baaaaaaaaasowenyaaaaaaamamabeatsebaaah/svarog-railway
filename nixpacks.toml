@@ -9,3 +9,31 @@ cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"
+
+[phases.setup]
+nixPkgs = [
+  "nodejs-18_x",
+  "xorg.libX11",
+  "xorg.libXext",
+  "xorg.libXrender",
+  "xorg.libXtst",
+  "xorg.libXi",
+  "glib",
+  "nss",
+  "nspr",
+  "atk",
+  "at-spi2-atk",
+  "libuuid",
+  "libdrm",
+  "mesa",
+  "pango",
+  "cairo",
+  "alsa-lib",
+  "cups",
+  "dbus",
+  "expat",
+  "gdk-pixbuf"
+]
+
+[phases.setup.env]
+CHROME_BIN = "${pkgs.chromium}/bin/chromium"
