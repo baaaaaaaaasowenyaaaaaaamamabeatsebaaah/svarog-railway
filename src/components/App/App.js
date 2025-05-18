@@ -218,14 +218,30 @@ export default class App {
   }
 
   showError(title, message) {
-    this.contentContainer.innerHTML = `
-      <div class="error" style="text-align: center; padding: 40px;">
-        <h2>${title}</h2>
-        <p>${message || 'Unknown error occurred'}</p>
-        <p>Check the console for more details.</p>
-        <button onclick="window.location.reload()">Retry</button>
-      </div>
-    `;
+    const errorEl = document.createElement('div');
+    errorEl.className = 'error';
+    errorEl.style.textAlign = 'center';
+    errorEl.style.padding = '40px';
+
+    errorEl.innerHTML = `
+    <h2>${title}</h2>
+    <p>${message || 'Unknown error occurred'}</p>
+    <p>Check the console for more details.</p>
+    <button class="retry-button">Retry</button>
+  `;
+
+    // Add event listener after the element is created
+    setTimeout(() => {
+      const retryButton = errorEl.querySelector('.retry-button');
+      if (retryButton) {
+        retryButton.addEventListener('click', () => {
+          window.location.reload();
+        });
+      }
+    }, 0);
+
+    this.contentContainer.innerHTML = '';
+    this.contentContainer.appendChild(errorEl);
   }
 
   handleScroll() {

@@ -35,17 +35,20 @@ export default class StoryblokIntegration {
    * Initialize the integration
    */
   init() {
-    if (!this.options.token) {
-      console.error('Storyblok token is required');
-      return;
-    }
+    // Check for token with fallback to empty string to prevent errors
+    const token = this.options.token || '';
 
-    console.log('Storyblok integration initialized');
+    if (!token) {
+      console.warn(
+        'Storyblok token is missing. Some features may not work correctly.'
+      );
+    } else {
+      console.log('Storyblok integration initialized with token available');
+    }
 
     // Initialize theme if available
     if (SvarogUI.switchTheme) {
       try {
-        // Pass just the theme name, not with '-theme' suffix
         console.log(`Setting theme to: ${this.options.theme}`);
         SvarogUI.switchTheme(this.options.theme);
       } catch (error) {
@@ -68,8 +71,15 @@ export default class StoryblokIntegration {
         return this.cache[slug];
       }
 
-      // Fetch from API
-      const url = `https://api.storyblok.com/v2/cdn/stories/${slug}?token=${this.options.token}&version=${this.options.version}`;
+      // Make sure token is available
+      const token = this.options.token || '';
+      if (!token) {
+        console.warn('Storyblok token is missing - using fallback content');
+        return null;
+      }
+
+      // Fetch from API with error handling
+      const url = `https://api.storyblok.com/v2/cdn/stories/${slug}?token=${token}&version=${this.options.version}`;
 
       // Wrap fetch in a try-catch to handle potential message channel errors
       let response;
@@ -400,13 +410,25 @@ export default class StoryblokIntegration {
   createErrorContent(errorMessage) {
     const errorContent = document.createElement('div');
     errorContent.className = 'error-content';
+
     errorContent.innerHTML = `
-      <div class="container" style="text-align: center; padding: 60px 20px;">
-        <h2>Error Loading Content</h2>
-        <p>${errorMessage || 'An error occurred while loading the content.'}</p>
-        <button class="retry-button" onclick="window.location.reload()">Retry</button>
-      </div>
-    `;
+    <div class="container" style="text-align: center; padding: 60px 20px;">
+      <h2>Error Loading Content</h2>
+      <p>${errorMessage || 'An error occurred while loading the content.'}</p>
+      <button class="retry-button">Retry</button>
+    </div>
+  `;
+
+    // Add event listener programmatically instead of using inline onclick
+    setTimeout(() => {
+      const retryButton = errorContent.querySelector('.retry-button');
+      if (retryButton) {
+        retryButton.addEventListener('click', () => {
+          window.location.reload();
+        });
+      }
+    }, 0);
+
     return errorContent;
   }
 

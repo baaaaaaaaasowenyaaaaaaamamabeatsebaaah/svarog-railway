@@ -10,25 +10,36 @@ module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
 
   // Load environment variables from .env file
-  let envVars = {};
-  try {
-    const env = dotenv.config().parsed || {};
-    envVars = Object.keys(env).reduce((prev, key) => {
-      // Don't include NODE_ENV from .env
-      if (key !== 'NODE_ENV') {
-        prev[`process.env.${key}`] = JSON.stringify(env[key]);
-      }
-      return prev;
-    }, {});
-  } catch (error) {
-    // .env file not found, that's okay in production
-    console.log('No .env file found or error parsing it.');
+  const envResult = dotenv.config();
+
+  // Create a properly structured environment variables object
+  const envVars = {};
+
+  // If we have an .env file, process its variables
+  if (envResult.parsed) {
+    Object.keys(envResult.parsed).forEach((key) => {
+      envVars[`process.env.${key}`] = JSON.stringify(envResult.parsed[key]);
+    });
   }
 
-  // Always define NODE_ENV based on webpack mode
+  // Always set NODE_ENV explicitly
   envVars['process.env.NODE_ENV'] = JSON.stringify(
     isProduction ? 'production' : 'development'
   );
+
+  // Add fallbacks for critical environment variables
+  const criticalVars = [
+    'STORYBLOK_PUBLIC_TOKEN',
+    'STORYBLOK_PREVIEW_TOKEN',
+    'STORYBLOK_SPACE_ID',
+  ];
+
+  criticalVars.forEach((key) => {
+    if (!envVars[`process.env.${key}`]) {
+      envVars[`process.env.${key}`] = JSON.stringify('');
+      console.warn(`Warning: Environment variable ${key} is not defined`);
+    }
+  });
 
   return {
     entry: './src/index.js',
@@ -51,7 +62,7 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
-      // Directly define environment variables instead of using Dotenv plugin
+      // The critical fix: properly define all environment variables
       new webpack.DefinePlugin(envVars),
 
       new HtmlWebpackPlugin({
@@ -68,7 +79,7 @@ module.exports = (env, argv) => {
         : []),
     ],
     devServer: {
-      port: process.env.PORT || 3000,
+      port: process.env.PORT || 8080,
       hot: true,
       historyApiFallback: true,
       static: {
@@ -76,18 +87,13 @@ module.exports = (env, argv) => {
       },
     },
     devtool: isProduction ? false : 'source-map',
-
-    // Silence performance warnings
     performance: {
       hints: false,
     },
-
-    // Hide all warnings
     stats: {
       warnings: false,
       children: false,
     },
-
     optimization: {
       splitChunks: {
         chunks: 'all',

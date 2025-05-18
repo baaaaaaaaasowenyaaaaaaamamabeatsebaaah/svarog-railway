@@ -1,4 +1,4 @@
-// server.js - update to be importable
+// server.js
 import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -18,7 +18,7 @@ export default function initializeApp(existingApp = null) {
 
   console.log('Initializing full server configuration...');
 
-  // Enhanced security configuration with Google Fonts
+  // Enhanced security configuration with updated CSP directives
   const helmetConfig = {
     contentSecurityPolicy: {
       directives: {
@@ -30,12 +30,14 @@ export default function initializeApp(existingApp = null) {
           'cdn.jsdelivr.net',
           'cdnjs.cloudflare.com',
         ],
+        // Add scriptSrcAttr to allow inline event handlers, or ideally remove them from your code
+        scriptSrcAttr: ["'unsafe-inline'"],
         styleSrc: [
           "'self'",
           "'unsafe-inline'",
           'cdn.jsdelivr.net',
           'cdnjs.cloudflare.com',
-          'fonts.googleapis.com', // Add Google Fonts
+          'fonts.googleapis.com',
         ],
         imgSrc: ["'self'", 'data:', '*.storyblok.com', 'cdn.jsdelivr.net'],
         connectSrc: [
@@ -50,7 +52,7 @@ export default function initializeApp(existingApp = null) {
           'data:',
           'cdn.jsdelivr.net',
           'cdnjs.cloudflare.com',
-          'fonts.gstatic.com', // Add Google Fonts storage
+          'fonts.gstatic.com',
         ],
         objectSrc: ["'none'"],
         upgradeInsecureRequests: [],
@@ -65,7 +67,7 @@ export default function initializeApp(existingApp = null) {
   const corsOptions = {
     origin:
       process.env.NODE_ENV === 'production'
-        ? [process.env.ALLOWED_ORIGIN || 'http://localhost:3000']
+        ? [process.env.ALLOWED_ORIGIN || 'http://localhost:8080']
         : true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
