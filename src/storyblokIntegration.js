@@ -1,7 +1,7 @@
 // src/storyblokIntegration.js
 import * as SvarogUI from 'svarog-ui';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
-import ContentCache from '../utils/contentCache.js';
+import ContentCache from './utils/contentCache.js';
 
 /**
  * Simple integration for Storyblok and Svarog UI focused on header functionality
