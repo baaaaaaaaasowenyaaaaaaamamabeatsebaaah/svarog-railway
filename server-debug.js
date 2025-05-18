@@ -9,11 +9,11 @@ dotenv.config();
 console.log('=== SERVER STARTUP DIAGNOSTICS ===');
 console.log(`Time: ${new Date().toISOString()}`);
 console.log(`NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
-console.log(`PORT: ${process.env.PORT || 3000}`);
+console.log(`PORT: ${process.env.PORT || 8080}`);
 
 // Create a minimal Express app first to handle health checks
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // Health check endpoint - respond immediately regardless of other initialization
 app.get('/health', (req, res) => {
