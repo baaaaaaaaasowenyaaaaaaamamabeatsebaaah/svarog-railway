@@ -1,0 +1,32 @@
+2025-05-18T08:46:34.252Z info: Starting sample data population
+2025-05-18T08:46:34.253Z info: Creating manufacturer: Apple
+2025-05-18T08:46:34.289Z info: Creating device: iPhone 15 Pro Max
+2025-05-18T08:46:34.291Z info: Creating action: Display Reparatur with price: 429
+2025-05-18T08:46:34.295Z error: Error populating sample data: 
+Invalid `prisma.action.upsert()` invocation:
+
+{
+  where: {
+    name_deviceId: {
+    ~~~~~~~~~~~~~
+      name: "Display Reparatur",
+      deviceId: 1
+    },
+?   id?: Int,
+?   AND?: ActionWhereInput | ActionWhereInput[],
+?   OR?: ActionWhereInput[],
+?   NOT?: ActionWhereInput | ActionWhereInput[],
+?   name?: StringFilter | String,
+?   deviceId?: IntFilter | Int,
+?   device?: DeviceScalarRelationFilter | DeviceWhereInput,
+?   prices?: PriceListRelationFilter
+  },
+  update: {},
+  create: {
+    name: "Display Reparatur",
+    deviceId: 1
+  }
+}
+
+Unknown argument `name_deviceId`. Available options are marked with ?.
+2025-05-18T08:46:34.301Z info: Sample data population completed

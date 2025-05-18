@@ -1,0 +1,96 @@
+2025-05-18T08:40:27.027Z error: Error processing manufacturer Apple: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.033Z error: Error processing manufacturer Apple Mac: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.037Z error: Error processing manufacturer Samsung: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.041Z error: Error processing manufacturer Nokia: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.046Z error: Error processing manufacturer HTC: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.049Z error: Error processing manufacturer Sony: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.051Z error: Error processing manufacturer LG: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.054Z error: Error processing manufacturer Motorola: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.057Z error: Error processing manufacturer Blackberry: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.060Z error: Error processing manufacturer Huawei: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.063Z error: Error processing manufacturer One Plus: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.065Z error: Error processing manufacturer Google: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.067Z error: Error processing manufacturer Honor: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.068Z error: Error processing manufacturer Xiaomi: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.071Z error: Error processing manufacturer Laptops: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:40:27.075Z error: Error processing manufacturer Spiele Konsolen: 
+Invalid `prisma.manufacturer.upsert()` invocation:
+
+
+The table `main.Manufacturer` does not exist in the current database.
+2025-05-18T08:42:52.642Z error: Error processing manufacturer Apple: Request failed with status code 500
+2025-05-18T08:42:53.272Z error: Error processing manufacturer Apple Mac: Request failed with status code 500
+2025-05-18T08:42:53.712Z error: Error processing manufacturer Samsung: Request failed with status code 500
+2025-05-18T08:42:54.297Z error: Error processing manufacturer Nokia: Request failed with status code 500
+2025-05-18T08:42:54.691Z error: Error processing manufacturer HTC: Request failed with status code 500
+2025-05-18T08:42:55.121Z error: Error processing manufacturer Sony: Request failed with status code 500
+2025-05-18T08:42:55.667Z error: Error processing manufacturer LG: Request failed with status code 500
+2025-05-18T08:42:56.079Z error: Error processing manufacturer Motorola: Request failed with status code 500
+2025-05-18T08:42:56.503Z error: Error processing manufacturer Blackberry: Request failed with status code 500
+2025-05-18T08:42:57.049Z error: Error processing manufacturer Huawei: Request failed with status code 500
+2025-05-18T08:42:57.463Z error: Error processing manufacturer One Plus: Request failed with status code 500
+2025-05-18T08:42:57.886Z error: Error processing manufacturer Google: Request failed with status code 500
+2025-05-18T08:42:58.411Z error: Error processing manufacturer Honor: Request failed with status code 500
+2025-05-18T08:42:58.803Z error: Error processing manufacturer Xiaomi: Request failed with status code 500
+2025-05-18T08:42:59.212Z error: Error processing manufacturer Laptops: Request failed with status code 500
+2025-05-18T08:42:59.783Z error: Error processing manufacturer Spiele Konsolen: Request failed with status code 500
