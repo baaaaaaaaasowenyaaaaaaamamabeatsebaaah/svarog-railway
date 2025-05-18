@@ -1,6 +1,7 @@
 // src/storyblokIntegration.js
 import * as SvarogUI from 'svarog-ui';
 import { CollapsibleHeaderAdapter } from './components/header/CollapsibleHeaderAdapter.js';
+import { MuchandyHeroAdapter } from './components/hero/MuchandyHeroAdapter.js';
 import ContentCache from './utils/contentCache.js';
 
 /**
@@ -36,6 +37,7 @@ export default class StoryblokIntegration {
     this.cache = {};
     this.componentAdapters = {
       CollapsibleHeader: CollapsibleHeaderAdapter,
+      MuchandyHero: MuchandyHeroAdapter,
       // Add more component adapters here as needed
     };
   }

@@ -18,7 +18,12 @@ module.exports = (env, argv) => {
   // Process .env file if available
   if (envResult.parsed) {
     Object.keys(envResult.parsed).forEach((key) => {
-      envVars[`process.env.${key}`] = JSON.stringify(envResult.parsed[key]);
+      // Make API credentials available to the client
+      if (key === 'API_USERNAME' || key === 'API_PASSWORD') {
+        envVars[`process.env.${key}`] = JSON.stringify(envResult.parsed[key]);
+      } else {
+        envVars[`process.env.${key}`] = JSON.stringify(envResult.parsed[key]);
+      }
     });
   }
 

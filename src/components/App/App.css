@@ -17,7 +17,7 @@
   z-index: 1001; /* Above header */
   display: none; /* Initially hidden */
   transition: opacity 0.3s ease;
-  top: 200px;
+  top: 300px;
 }
 
 /* Mobile icons position */
@@ -39,7 +39,6 @@
 
 .app-content {
   flex: 1;
-  padding-top: 20px; /* Add a little padding below header */
   min-height: 100vh; /* Ensure content takes at least full viewport height */
   overflow-x: hidden; /* Prevent horizontal scroll */
 }

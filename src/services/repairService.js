@@ -102,6 +102,64 @@ export class RepairService {
       throw new Error(`Failed to fetch price for action ${actionId}`);
     }
   }
+
+  /**
+   * Get conditions for a device (for buyback)
+   * @param {number} deviceId - Device ID
+   * @returns {Promise<Array>} - Array of conditions
+   */
+  async getConditionsByDevice(deviceId) {
+    try {
+      const parsedId = parseInt(deviceId, 10);
+      if (isNaN(parsedId)) {
+        throw new Error('Invalid device ID');
+      }
+
+      // Call the API to get conditions for this device
+      const response = await fetch(`/api/devices/${parsedId}/conditions`);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch conditions: ${response.status} ${response.statusText}`
+        );
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error(`Error fetching conditions for device ${deviceId}:`, error);
+      throw new Error(`Failed to fetch conditions for device ${deviceId}`);
+    }
+  }
+
+  /**
+   * Get buyback price for a condition
+   * @param {number} conditionId - Condition ID
+   * @returns {Promise<Object>} - Price information
+   */
+  async getPriceForCondition(conditionId) {
+    try {
+      const parsedId = parseInt(conditionId, 10);
+      if (isNaN(parsedId)) {
+        throw new Error('Invalid condition ID');
+      }
+
+      // Call the API to get price for this condition
+      const response = await fetch(`/api/conditions/${parsedId}/price`);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch price: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(
+        `Error fetching price for condition ${conditionId}:`,
+        error
+      );
+      throw new Error(`Failed to fetch price for condition ${conditionId}`);
+    }
+  }
 }
 
 export default new RepairService();

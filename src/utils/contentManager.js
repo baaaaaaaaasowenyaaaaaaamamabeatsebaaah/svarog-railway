@@ -42,6 +42,10 @@ export default class ContentManager {
 
     // Initialize
     this.init();
+
+    // Add this to bind additional methods
+    this.renderComponent = this.renderComponent.bind(this);
+    this.createErrorContent = this.createErrorContent.bind(this);
   }
 
   init() {
@@ -146,26 +150,192 @@ export default class ContentManager {
   }
 
   renderStoryContent(story) {
-    // This should render the actual Storyblok content
-    // Simplified for now - in a real implementation, you'd have component renderers
     const content = document.createElement('div');
     content.className = 'page-content';
 
     if (story && story.content) {
-      content.innerHTML = `
-        <div class="container">
-          <h1>${story.content.title || story.name}</h1>
-          <div class="content">
-            ${story.content.text || 'No content available'}
-          </div>
-        </div>
-      `;
+      // Create container
+      const container = document.createElement('div');
+      container.className = 'container';
+
+      // Check if this is the home page and it has a hero component
+      if (story.slug === 'home' || story.slug === '') {
+        try {
+          // Add hero component if on home page
+          if (
+            story.content.hero &&
+            Array.isArray(story.content.hero) &&
+            story.content.hero.length > 0
+          ) {
+            const heroData = story.content.hero[0];
+            if (heroData && this.storyblok) {
+              const AdapterClass =
+                this.storyblok.componentAdapters.MuchandyHero;
+              if (AdapterClass) {
+                const adapter = new AdapterClass(heroData);
+                const heroComponent = adapter.createComponent(
+                  this.storyblok.componentsRegistry
+                );
+                const heroElement = heroComponent.getElement();
+                content.appendChild(heroElement);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error rendering hero:', error);
+        }
+      }
+
+      // Add page title if available and not home page
+      if (
+        story.slug !== 'home' &&
+        story.slug !== '' &&
+        (story.name || story.content.title)
+      ) {
+        const title = document.createElement('h1');
+        title.className = 'content-title';
+        title.textContent = story.content.title || story.name;
+        container.appendChild(title);
+      }
+
+      // Add rest of content
+      if (story.content.body && Array.isArray(story.content.body)) {
+        story.content.body.forEach((component) => {
+          const componentElement = this.renderComponent(component);
+          if (componentElement) {
+            container.appendChild(componentElement);
+          }
+        });
+      } else if (story.content.text) {
+        const textContainer = document.createElement('div');
+        textContainer.className = 'content-text';
+        textContainer.innerHTML = story.content.text;
+        container.appendChild(textContainer);
+      }
+
+      content.appendChild(container);
     } else {
       content.innerHTML =
         '<div class="container"><p>No content found</p></div>';
     }
 
     return content;
+  }
+
+  renderComponent(component) {
+    if (!component || !component.component) {
+      console.warn('Invalid component data:', component);
+      return null;
+    }
+
+    try {
+      // Check if storyblok is available and has componentAdapters
+      if (!this.storyblok || !this.storyblok.componentAdapters) {
+        return this.createGenericComponent(component);
+      }
+
+      // Check if we have an adapter for this component
+      const AdapterClass =
+        this.storyblok.componentAdapters[component.component];
+
+      if (AdapterClass) {
+        // Create adapter instance
+        const adapter = new AdapterClass(component);
+        // Create component using the adapter
+        const svarogComponent = adapter.createComponent(
+          this.storyblok.componentsRegistry
+        );
+        // Return the element
+        return svarogComponent.getElement();
+      }
+
+      // For components without adapters, create a generic element
+      return this.createGenericComponent(component);
+    } catch (error) {
+      console.error(`Error rendering component ${component.component}:`, error);
+      return this.createErrorComponent(component.component, error.message);
+    }
+  }
+
+  createGenericComponent(component) {
+    const genericElement = document.createElement('div');
+    genericElement.className = `sb-component sb-component-${component.component.toLowerCase()}`;
+
+    // Create title if component has one
+    if (component.title || component.headline) {
+      const title = document.createElement('h2');
+      title.className = 'component-title';
+      title.textContent = component.title || component.headline;
+      genericElement.appendChild(title);
+    }
+
+    // Create content if component has it
+    if (component.text || component.content) {
+      const content = document.createElement('div');
+      content.className = 'component-content';
+      content.innerHTML = component.text || component.content || '';
+      genericElement.appendChild(content);
+    }
+
+    // If component has children, render them
+    if (component.body && Array.isArray(component.body)) {
+      const childrenContainer = document.createElement('div');
+      childrenContainer.className = 'component-children';
+
+      component.body.forEach((child) => {
+        const childElement = this.renderComponent(child);
+        if (childElement) {
+          childrenContainer.appendChild(childElement);
+        }
+      });
+
+      genericElement.appendChild(childrenContainer);
+    }
+
+    return genericElement;
+  }
+
+  // Add this method
+  createErrorComponent(componentName, errorMessage) {
+    const errorElement = document.createElement('div');
+    errorElement.className = 'component-error';
+    errorElement.style.padding = '15px';
+    errorElement.style.margin = '10px 0';
+    errorElement.style.backgroundColor = '#fff0f0';
+    errorElement.style.border = '1px solid #ffcece';
+    errorElement.style.borderRadius = '4px';
+
+    errorElement.innerHTML = `
+      <p><strong>Error rendering component: ${componentName}</strong></p>
+      <p>${errorMessage}</p>
+    `;
+
+    return errorElement;
+  }
+
+  createErrorContent(errorMessage) {
+    const errorContent = document.createElement('div');
+    errorContent.className = 'error-content';
+
+    errorContent.innerHTML = `
+      <div class="container" style="text-align: center; padding: 60px 20px;">
+        <h2>Error Loading Content</h2>
+        <p>${errorMessage || 'An error occurred while loading the content.'}</p>
+        <button class="retry-button">Retry</button>
+      </div>
+    `;
+
+    // Add event listener programmatically
+    setTimeout(() => {
+      const retryButton = errorContent.querySelector('.retry-button');
+      if (retryButton) {
+        retryButton.addEventListener('click', () => {
+          window.location.reload();
+        });
+      }
+    }, 0);
+
+    return errorContent;
   }
 
   createPlaceholderContent(slug) {
