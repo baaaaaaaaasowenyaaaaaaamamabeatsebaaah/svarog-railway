@@ -12,7 +12,9 @@
     "import": "node src/services/import.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "create-admin": "node scripts/createAdminUser.js",
+    "hash-password": "node scripts/hash-password.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -20,12 +22,15 @@
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "@storyblok/js": "^3.4.0",
-    "compression": "^1.7.4",
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.0",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "dotenv-webpack": "^8.1.0",
-    "express": "^4.19.2",
-    "helmet": "^7.1.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
     "puppeteer": "^24.8.2",
     "puppeteer-core": "^24.8.2",
