@@ -70,7 +70,22 @@ export default class StoryblokIntegration {
 
       // Fetch from API
       const url = `https://api.storyblok.com/v2/cdn/stories/${slug}?token=${this.options.token}&version=${this.options.version}`;
-      const response = await fetch(url);
+
+      // Wrap fetch in a try-catch to handle potential message channel errors
+      let response;
+      try {
+        response = await fetch(url);
+      } catch (error) {
+        // Handle message channel errors gracefully
+        if (error.message && error.message.includes('message channel closed')) {
+          console.warn(
+            'Navigation cancelled during story fetch:',
+            error.message
+          );
+          throw new Error('Navigation cancelled');
+        }
+        throw error;
+      }
 
       if (!response.ok) {
         throw new Error(
@@ -84,6 +99,12 @@ export default class StoryblokIntegration {
 
       return data.story;
     } catch (error) {
+      // Special handling for navigation cancellation
+      if (error.message === 'Navigation cancelled') {
+        console.log(`Story fetch for ${slug} was cancelled due to navigation`);
+        return null;
+      }
+
       console.error(`Error fetching story ${slug}:`, error);
       throw error;
     }

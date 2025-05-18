@@ -14,7 +14,7 @@ export default function initializeApp(existingApp = null) {
 
   // Use existing app or create a new one
   const app = existingApp || express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 8080;
 
   console.log('Initializing full server configuration...');
 

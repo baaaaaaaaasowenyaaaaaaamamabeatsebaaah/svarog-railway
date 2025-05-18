@@ -97,6 +97,10 @@ export default class ContentManager {
 
   async loadPage(slug) {
     try {
+      // Set a flag to track if this request is still valid
+      const requestId = Math.random().toString(36).substring(7);
+      this.currentRequestId = requestId;
+
       // Show loading state first
       if (this.contentElement) {
         this.contentElement.innerHTML = this.loadingTemplate;
@@ -105,10 +109,31 @@ export default class ContentManager {
       // Add a small delay to ensure loading state is rendered
       await new Promise((resolve) => setTimeout(resolve, 10));
 
+      // Check if this request is still the current one
+      if (this.currentRequestId !== requestId) {
+        console.log('Request cancelled, another navigation started');
+        return null;
+      }
+
       // Use Storyblok if available, otherwise create placeholder content
       if (this.storyblok) {
-        const story = await this.storyblok.fetchStory(slug);
-        return this.renderStoryContent(story);
+        try {
+          const story = await this.storyblok.fetchStory(slug);
+
+          // Check again if this request is still valid
+          if (this.currentRequestId !== requestId) {
+            console.log('Story fetch completed but request no longer current');
+            return null;
+          }
+
+          return this.renderStoryContent(story);
+        } catch (error) {
+          // Only throw if this is still the current request
+          if (this.currentRequestId === requestId) {
+            throw error;
+          }
+          return null;
+        }
       } else {
         // Placeholder content for testing without Storyblok
         return this.createPlaceholderContent(slug);

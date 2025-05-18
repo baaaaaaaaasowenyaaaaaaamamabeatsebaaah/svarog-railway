@@ -18,6 +18,7 @@ export default class Router {
     this.wildcardHandler = null;
     this.currentPath = window.location.pathname;
     this.initialized = false;
+    this.navigationInProgress = false; // Add flag to track navigation status
 
     // Bind methods
     this.handleNavigation = this.handleNavigation.bind(this);
@@ -72,40 +73,59 @@ export default class Router {
   }
 
   async handleNavigation() {
-    const path = window.location.pathname;
-
-    // Check if navigation allowed
-    if (!this.beforeRoute(path, this.currentPath)) {
+    // Prevent concurrent navigation
+    if (this.navigationInProgress) {
+      console.log('Navigation already in progress, ignoring request');
       return;
     }
 
-    // Show loading state
-    this.contentElement.innerHTML = this.loadingTemplate;
-
-    let handler = null;
-
-    // Try to find a specific route handler first
-    if (this.routes.has(path)) {
-      handler = this.routes.get(path);
-    }
-    // For root path, use the default handler if available
-    else if (path === '/' && this.defaultHandler) {
-      handler = this.defaultHandler;
-    }
-    // For any other path, use the wildcard handler if available
-    else if (this.wildcardHandler) {
-      handler = this.wildcardHandler;
-    }
-
-    if (!handler) {
-      console.error(`No handler for route: ${path}`);
-      this.contentElement.innerHTML = this.errorTemplate;
-      return;
-    }
+    this.navigationInProgress = true;
 
     try {
+      const path = window.location.pathname;
+
+      // Check if navigation allowed
+      if (!this.beforeRoute(path, this.currentPath)) {
+        this.navigationInProgress = false;
+        return;
+      }
+
+      // Show loading state
+      this.contentElement.innerHTML = this.loadingTemplate;
+
+      let handler = null;
+
+      // Try to find a specific route handler first
+      if (this.routes.has(path)) {
+        handler = this.routes.get(path);
+      }
+      // For root path, use the default handler if available
+      else if (path === '/' && this.defaultHandler) {
+        handler = this.defaultHandler;
+      }
+      // For any other path, use the wildcard handler if available
+      else if (this.wildcardHandler) {
+        handler = this.wildcardHandler;
+      }
+
+      if (!handler) {
+        console.error(`No handler for route: ${path}`);
+        this.contentElement.innerHTML = this.errorTemplate;
+        this.navigationInProgress = false;
+        return;
+      }
+
       // Execute route handler with the current path
       const content = await handler(path);
+
+      // Check if navigation was canceled or changed during content loading
+      if (path !== window.location.pathname) {
+        console.log(
+          'Navigation changed during content loading, aborting update'
+        );
+        this.navigationInProgress = false;
+        return;
+      }
 
       // Update content
       if (typeof content === 'string') {
@@ -130,6 +150,9 @@ export default class Router {
       console.error('Error loading route:', error);
       this.contentElement.innerHTML =
         this.errorTemplate + `<p>${error.message}</p>`;
+    } finally {
+      // Make sure to always reset the flag
+      this.navigationInProgress = false;
     }
   }
 

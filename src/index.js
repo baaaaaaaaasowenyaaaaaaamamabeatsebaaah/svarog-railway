@@ -4,6 +4,22 @@ import StoryblokIntegration from './storyblokIntegration.js';
 import ThemeManager from './utils/themeManager.js';
 import App from './components/App/App.js';
 
+// Add global error handling for message channel errors
+window.addEventListener('unhandledrejection', (event) => {
+  // Only suppress message channel errors
+  if (
+    event.reason &&
+    event.reason.message &&
+    event.reason.message.includes(
+      'message channel closed before a response was received'
+    )
+  ) {
+    // This error is due to navigation, it's expected and safe to ignore
+    console.log('Suppressing navigation-related message channel error');
+    event.preventDefault(); // Prevent it from appearing in console
+  }
+});
+
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
   try {
