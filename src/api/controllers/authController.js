@@ -107,6 +107,23 @@ export default class AuthController {
   }
 
   /**
+   * Check authentication status
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  static status(req, res) {
+    res.json({
+      authenticated: true,
+      user: {
+        id: req.user.id,
+        username: req.user.username,
+        role: req.user.role,
+      },
+      expiresAt: req.user.exp ? req.user.exp * 1000 : null, // Convert to milliseconds if exp exists
+    });
+  }
+
+  /**
    * Get all users (admin only)
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
