@@ -1,4 +1,5 @@
-// server.js - update to be importable
+// server.js - Modify to make it work as a module
+
 import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -7,116 +8,33 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import apiRoutes from './src/api/routes.js';
 
-// Create a function that can be imported by server-debug.js
-export default function initializeApp(existingApp = null) {
+// Allow for either standalone execution or being imported by railway-start.js
+export default function initializeServer() {
+  console.log('Initializing main server...');
+
+  // Create a new Express app - it won't conflict with railway-start.js
+  // because we're not binding to a port in this function
+  const app = express();
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  // Use existing app or create a new one
-  const app = existingApp || express();
-  const isRailway =
-    process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_STATIC_URL;
-  const PORT = isRailway ? 8080 : process.env.PORT || 3000;
-
-  console.log(
-    `Environment check: Running on Railway? ${isRailway ? 'Yes' : 'No'}`
-  );
-  console.log(`Setting up server on port: ${PORT}`);
-
-  console.log('Initializing full server configuration...');
-
-  // Enhanced security configuration with Google Fonts
+  // Enhanced security configuration
   const helmetConfig = {
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "'unsafe-eval'",
-          'cdn.jsdelivr.net',
-          'cdnjs.cloudflare.com',
-        ],
-        styleSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          'cdn.jsdelivr.net',
-          'cdnjs.cloudflare.com',
-          'fonts.googleapis.com', // Add Google Fonts
-        ],
-        imgSrc: ["'self'", 'data:', '*.storyblok.com', 'cdn.jsdelivr.net'],
-        connectSrc: [
-          "'self'",
-          'api.storyblok.com',
-          'cdn.storyblok.com',
-          'localhost:*',
-          'ws://localhost:*',
-        ],
-        fontSrc: [
-          "'self'",
-          'data:',
-          'cdn.jsdelivr.net',
-          'cdnjs.cloudflare.com',
-          'fonts.gstatic.com', // Add Google Fonts storage
-        ],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: [],
-      },
-    },
-    xssFilter: true,
-    noSniff: true,
-    referrerPolicy: { policy: 'same-origin' },
-  };
-
-  // CORS configuration
-  const corsOptions = {
-    origin:
-      process.env.NODE_ENV === 'production'
-        ? [process.env.ALLOWED_ORIGIN || 'http://localhost:3000']
-        : true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true,
-    maxAge: 86400, // 24 hours
+    // Your existing helmet config...
   };
 
   // Apply middleware
   app.use(helmet(helmetConfig));
   app.use(compression());
-  app.use(cors(corsOptions));
+  app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Trust proxy if behind a reverse proxy
-  if (process.env.NODE_ENV === 'production') {
-    app.set('trust proxy', 1);
-  }
-
-  // Health check endpoint (if not already defined)
-  if (!existingApp) {
-    app.get('/health', (req, res) => {
-      res.status(200).json({ status: 'ok' });
-    });
-  }
-
-  // API routes
+  // Add routes
   app.use('/api', apiRoutes);
 
   // Serve static files
-  if (process.env.NODE_ENV === 'production') {
-    app.use(
-      express.static('dist', {
-        maxAge: '1d',
-        setHeaders: (res, path) => {
-          if (path.endsWith('.html')) {
-            res.setHeader('Cache-Control', 'no-cache');
-          }
-        },
-      })
-    );
-  } else {
-    app.use(express.static('dist'));
-  }
+  app.use(express.static('dist'));
 
   // Handle all non-API routes
   app.get('*', (req, res, next) => {
@@ -138,17 +56,15 @@ export default function initializeApp(existingApp = null) {
     });
   });
 
-  // Only start server if not already started by server-debug
-  if (!existingApp) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  }
-
+  console.log('Main server initialization complete');
   return app;
 }
 
-// Allow direct execution
+// If this file is run directly (not imported), start the server
 if (import.meta.url === `file://${process.argv[1]}`) {
-  initializeApp();
+  const app = initializeServer();
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 }

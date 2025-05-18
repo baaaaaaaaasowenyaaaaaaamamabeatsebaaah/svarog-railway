@@ -6,8 +6,9 @@
   "main": "server.js",
   "scripts": {
     "dev": "webpack serve --mode development --config webpack.config.cjs",
+    "start": "node railway-start.js",
+    "start:local": "node server.js",
     "build": "webpack --mode production --config webpack.config.cjs",
-    "start": "PORT=8080 node server.js",
     "crawl": "node src/services/crawler.js",
     "import": "node src/services/import.js",
     "prisma:generate": "prisma generate",
