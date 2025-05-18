@@ -1,4 +1,4 @@
-// server.js (updated with security enhancements)
+// server.js
 import express from 'express';
 import compression from 'compression';
 import helmet from 'helmet';
@@ -18,9 +18,9 @@ console.log('Server starting...');
 console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 console.log(`PORT: ${process.env.PORT || 3000}`);
 
-// Then make sure your app listens on the PORT from environment variables:
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
+// Early health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Enhanced security configuration
@@ -85,11 +85,6 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
 // API routes
 app.use('/api', apiRoutes);
 
@@ -130,7 +125,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
+// ONLY ONE app.listen - at the end after all configuration
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

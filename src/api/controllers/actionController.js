@@ -1,109 +1,157 @@
-// src/api/controllers/authController.js
-import { generateToken } from '../middleware/auth.js';
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
+// src/api/controllers/actionController.js
+import { PrismaClient } from '@prisma/client';
 
-// Load environment variables
-dotenv.config();
+const prisma = new PrismaClient();
 
 /**
- * Controller for authentication-related operations
+ * Controller for action-related operations
  */
-export default class AuthController {
+export default class ActionController {
   /**
-   * Login a user using environment variables
+   * Get all actions
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
    * @param {Function} next - Express next function
    */
-  static async login(req, res, next) {
+  static async getAll(req, res, next) {
     try {
-      const { username, password } = req.body;
+      const { deviceId } = req.query;
 
-      // Get credentials from environment variables
-      const envUsername = process.env.API_USERNAME;
-      const envPasswordHash = process.env.API_PASSWORD_HASH;
-
-      // Validate that environment variables are set
-      if (!envUsername || !envPasswordHash) {
-        console.error(
-          'Environment variables for authentication are not properly set'
-        );
-        return res.status(500).json({
-          error: 'Server Configuration Error',
-          message: 'Authentication is not properly configured',
-        });
+      // Build where clause
+      const where = {};
+      if (deviceId) {
+        where.deviceId = Number(deviceId);
       }
 
-      // Check username
-      if (username !== envUsername) {
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid username or password',
-        });
-      }
-
-      // Check password
-      const isPasswordValid = await bcrypt.compare(password, envPasswordHash);
-
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          error: 'Unauthorized',
-          message: 'Invalid username or password',
-        });
-      }
-
-      // Create user object
-      const user = {
-        id: 1, // Simple ID for env-based auth
-        username: envUsername,
-        role: 'admin', // Env-based auth users are admins
-      };
-
-      // Generate token
-      const token = generateToken(user);
-
-      // Return user info and token
-      res.json({
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
+      const actions = await prisma.action.findMany({
+        where,
+        include: {
+          device: {
+            include: {
+              manufacturer: true,
+            },
+          },
         },
-        token,
+        orderBy: { name: 'asc' },
       });
+
+      res.json(actions);
     } catch (error) {
       next(error);
     }
   }
 
   /**
-   * Verify current token
+   * Get an action by ID
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
+   * @param {Function} next - Express next function
    */
-  static verify(req, res) {
-    // Auth middleware already verified the token
-    res.json({
-      user: req.user,
-      valid: true,
-    });
+  static async getById(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      const action = await prisma.action.findUnique({
+        where: { id: Number(id) },
+        include: {
+          device: {
+            include: {
+              manufacturer: true,
+            },
+          },
+          prices: {
+            orderBy: {
+              dateCollected: 'desc',
+            },
+            take: 10,
+          },
+        },
+      });
+
+      if (!action) {
+        return res.status(404).json({
+          error: 'Not Found',
+          message: `Action with ID ${id} not found`,
+        });
+      }
+
+      res.json(action);
+    } catch (error) {
+      next(error);
+    }
   }
 
   /**
-   * Check authentication status
+   * Create a new action
    * @param {Object} req - Express request object
    * @param {Object} res - Express response object
+   * @param {Function} next - Express next function
    */
-  static status(req, res) {
-    res.json({
-      authenticated: true,
-      user: {
-        id: req.user.id,
-        username: req.user.username,
-        role: req.user.role,
-      },
-      expiresAt: req.user.exp * 1000, // Convert to milliseconds
-    });
+  static async create(req, res, next) {
+    try {
+      const { name, deviceId } = req.body;
+
+      const action = await prisma.action.create({
+        data: {
+          name,
+          deviceId: Number(deviceId),
+        },
+        include: {
+          device: true,
+        },
+      });
+
+      res.status(201).json(action);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Update an action
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next function
+   */
+  static async update(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { name, deviceId } = req.body;
+
+      const action = await prisma.action.update({
+        where: { id: Number(id) },
+        data: {
+          name,
+          deviceId: deviceId ? Number(deviceId) : undefined,
+        },
+        include: {
+          device: true,
+        },
+      });
+
+      res.json(action);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Delete an action
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @param {Function} next - Express next function
+   */
+  static async delete(req, res, next) {
+    try {
+      const { id } = req.params;
+
+      await prisma.action.delete({
+        where: { id: Number(id) },
+      });
+
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
   }
 }
