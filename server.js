@@ -15,6 +15,9 @@ const PORT = 8080; // Changed from 3000 to 8080
 
 // Early health check endpoint - MUST be before any other middleware
 app.get('/health', (req, res) => {
+  console.log(
+    `[${new Date().toISOString()}] Health check requested in main server`
+  );
   res.status(200).json({ status: 'ok' });
 });
 
