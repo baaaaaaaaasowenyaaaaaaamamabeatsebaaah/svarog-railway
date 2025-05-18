@@ -14,7 +14,14 @@ export default function initializeApp(existingApp = null) {
 
   // Use existing app or create a new one
   const app = existingApp || express();
-  const PORT = process.env.PORT || 8080;
+  const isRailway =
+    process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_STATIC_URL;
+  const PORT = isRailway ? 8080 : process.env.PORT || 3000;
+
+  console.log(
+    `Environment check: Running on Railway? ${isRailway ? 'Yes' : 'No'}`
+  );
+  console.log(`Setting up server on port: ${PORT}`);
 
   console.log('Initializing full server configuration...');
 
