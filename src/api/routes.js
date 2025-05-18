@@ -9,6 +9,7 @@ import uniqueManufacturerRoutes from './routes/uniqueManufacturerRoutes.js';
 import uniqueDeviceRoutes from './routes/uniqueDeviceRoutes.js';
 import { rateLimiter } from './middleware/rateLimit.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import ConfigController from './controllers/configController.js';
 
 const router = Router();
 
@@ -23,6 +24,9 @@ router.get('/status', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Public config endpoint - no authentication required
+router.get('/config', ConfigController.getPublicConfig);
 
 // Mount routes
 router.use('/auth', authRoutes);

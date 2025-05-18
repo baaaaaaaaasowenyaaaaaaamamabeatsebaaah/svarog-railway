@@ -9,13 +9,13 @@ module.exports = (env, argv) => {
   // Determine if we're in production mode
   const isProduction = argv.mode === 'production';
 
-  // Load environment variables from .env file
+  // Load environment variables from .env file for local development
   const envResult = dotenv.config();
 
   // Create a properly structured environment variables object
   const envVars = {};
 
-  // If we have an .env file, process its variables
+  // Process .env file if available
   if (envResult.parsed) {
     Object.keys(envResult.parsed).forEach((key) => {
       envVars[`process.env.${key}`] = JSON.stringify(envResult.parsed[key]);
@@ -27,19 +27,29 @@ module.exports = (env, argv) => {
     isProduction ? 'production' : 'development'
   );
 
-  // Add fallbacks for critical environment variables
-  const criticalVars = [
-    'STORYBLOK_PUBLIC_TOKEN',
-    'STORYBLOK_PREVIEW_TOKEN',
-    'STORYBLOK_SPACE_ID',
-  ];
+  // For local development only, use .env variables as fallbacks
+  // In production, these will be empty strings and the app will fetch them from the API
+  if (!isProduction) {
+    const criticalVars = [
+      'STORYBLOK_PUBLIC_TOKEN',
+      'STORYBLOK_PREVIEW_TOKEN',
+      'STORYBLOK_SPACE_ID',
+    ];
 
-  criticalVars.forEach((key) => {
-    if (!envVars[`process.env.${key}`]) {
-      envVars[`process.env.${key}`] = JSON.stringify('');
-      console.warn(`Warning: Environment variable ${key} is not defined`);
-    }
-  });
+    criticalVars.forEach((key) => {
+      if (!envVars[`process.env.${key}`]) {
+        envVars[`process.env.${key}`] = JSON.stringify('');
+        console.warn(
+          `Warning: Environment variable ${key} is not defined in .env file`
+        );
+      }
+    });
+  } else {
+    // In production builds, set empty defaults - will be fetched from API
+    envVars['process.env.STORYBLOK_PUBLIC_TOKEN'] = JSON.stringify('');
+    envVars['process.env.STORYBLOK_PREVIEW_TOKEN'] = JSON.stringify('');
+    envVars['process.env.STORYBLOK_SPACE_ID'] = JSON.stringify('');
+  }
 
   return {
     entry: './src/index.js',
@@ -62,7 +72,7 @@ module.exports = (env, argv) => {
       ],
     },
     plugins: [
-      // The critical fix: properly define all environment variables
+      // Define environment variables
       new webpack.DefinePlugin(envVars),
 
       new HtmlWebpackPlugin({
@@ -84,6 +94,9 @@ module.exports = (env, argv) => {
       historyApiFallback: true,
       static: {
         directory: path.join(__dirname, 'public'),
+      },
+      proxy: {
+        '/api': 'http://localhost:8080', // Proxy API requests to backend during development
       },
     },
     devtool: isProduction ? false : 'source-map',

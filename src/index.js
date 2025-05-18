@@ -20,12 +20,51 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
+// Function to initialize the application with configuration
+async function initializeApp() {
   try {
-    // Create Storyblok integration with token from environment variables
+    // Show initial loading state
+    const appElement = document.getElementById('app');
+    if (appElement) {
+      appElement.innerHTML = `
+        <div style="text-align: center; padding: 50px">
+          <h1>Loading application...</h1>
+        </div>
+      `;
+    }
+
+    // Fetch configuration from the server
+    console.log('Fetching application configuration...');
+    let config = {};
+
+    try {
+      const response = await fetch('/api/config');
+      if (response.ok) {
+        config = await response.json();
+        console.log('Configuration loaded successfully');
+      } else {
+        console.warn(
+          'Failed to load configuration from server:',
+          response.status
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching configuration:', error);
+    }
+
+    // Fallback to environment variables if available (for local development)
+    const storyblokToken =
+      config.STORYBLOK_PUBLIC_TOKEN || process.env.STORYBLOK_PUBLIC_TOKEN || '';
+
+    // Log configuration state (without exposing sensitive data)
+    console.log(`Storyblok token available: ${!!storyblokToken}`);
+    console.log(
+      `Environment: ${config.NODE_ENV || process.env.NODE_ENV || 'production'}`
+    );
+
+    // Create Storyblok integration with token
     const storyblok = new StoryblokIntegration({
-      token: process.env.STORYBLOK_PUBLIC_TOKEN,
+      token: storyblokToken,
       version: 'published',
       theme: ThemeManager.THEMES.MUCHANDY,
     });
@@ -34,7 +73,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     storyblok.init();
 
     // Get app container
-    const appElement = document.getElementById('app');
     if (!appElement) {
       console.error('App container not found');
       return;
@@ -44,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const app = new App({
       storyblok: storyblok,
       theme: ThemeManager.THEMES.MUCHANDY,
-      collapseThreshold: 100, // Adjust this value to match the header's threshold
+      collapseThreshold: 100,
     });
 
     // Clear app container and add app element
@@ -56,14 +94,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show error in app container
     const appElement = document.getElementById('app');
     if (appElement) {
-      appElement.innerHTML = `
-        <div class="error" style="text-align: center; padding: 40px;">
-          <h2>Application Error</h2>
-          <p>${error.message || 'Unknown error occurred'}</p>
-          <p>Check the console for more details.</p>
-          <button onclick="window.location.reload()">Retry</button>
-        </div>
+      const errorEl = document.createElement('div');
+      errorEl.className = 'error';
+      errorEl.style.textAlign = 'center';
+      errorEl.style.padding = '40px';
+
+      errorEl.innerHTML = `
+        <h2>Application Error</h2>
+        <p>${error.message || 'Unknown error occurred'}</p>
+        <p>Check the console for more details.</p>
+        <button class="retry-button">Retry</button>
       `;
+
+      // Add event listener after the element is created
+      setTimeout(() => {
+        const retryButton = errorEl.querySelector('.retry-button');
+        if (retryButton) {
+          retryButton.addEventListener('click', () => {
+            window.location.reload();
+          });
+        }
+      }, 0);
+
+      appElement.innerHTML = '';
+      appElement.appendChild(errorEl);
     }
   }
-});
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp);

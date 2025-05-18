@@ -35,15 +35,15 @@ export default class StoryblokIntegration {
    * Initialize the integration
    */
   init() {
-    // Check for token with fallback to empty string to prevent errors
+    // Check for token with better logging
     const token = this.options.token || '';
 
     if (!token) {
       console.warn(
-        'Storyblok token is missing. Some features may not work correctly.'
+        'Storyblok token is missing. Using fallback content instead of API content.'
       );
     } else {
-      console.log('Storyblok integration initialized with token available');
+      console.log('Storyblok integration initialized with token');
     }
 
     // Initialize theme if available
@@ -53,7 +53,10 @@ export default class StoryblokIntegration {
         SvarogUI.switchTheme(this.options.theme);
       } catch (error) {
         console.warn('Error setting theme:', error);
+        this.applyFallbackTheming(this.options.theme);
       }
+    } else {
+      this.applyFallbackTheming(this.options.theme);
     }
   }
 
@@ -172,6 +175,7 @@ export default class StoryblokIntegration {
    * @returns {HTMLElement} - Fallback header element
    */
   createFallbackHeader() {
+    console.log('Creating fallback header');
     const fallbackHeader = document.createElement('header');
     fallbackHeader.className = 'fallback-header';
     fallbackHeader.style.padding = '20px';
@@ -182,15 +186,15 @@ export default class StoryblokIntegration {
     fallbackHeader.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
 
     fallbackHeader.innerHTML = `
-      <div class="container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
-        <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">Svarog UI</h1>
-        <nav>
-          <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
-          <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
-          <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
-        </nav>
-      </div>
-    `;
+    <div class="container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto;">
+      <h1 style="margin: 0; font-size: 1.5rem; color: var(--theme-primary, #fd7e14);">Svarog UI</h1>
+      <nav>
+        <a href="/" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Home</a>
+        <a href="/about" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">About</a>
+        <a href="/contact" style="margin: 0 10px; text-decoration: none; color: var(--theme-text, #333);">Contact</a>
+      </nav>
+    </div>
+  `;
 
     return fallbackHeader;
   }
